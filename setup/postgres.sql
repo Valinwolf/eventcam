@@ -1,8 +1,4 @@
 -- EventCam PostgreSQL schema
--- Assumes PostgreSQL 13+ and pgcrypto for gen_random_uuid()
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 -- =========================================
 -- guests
 -- =========================================
