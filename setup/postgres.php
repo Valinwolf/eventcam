@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 $allowNonPostgres = in_array('--allow-non-postgres', $argv ?? [], true);
+$forceLocalAuth = in_array('--force-local-auth', $argv ?? [], true);
 
 $currentUser = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
     ? (posix_getpwuid(posix_geteuid())['name'] ?? null)
@@ -74,19 +75,7 @@ echo "User   : {$dbUser}\n";
 echo "Host   : {$dbHost}\n";
 echo "Port   : {$dbPort}\n";
 echo "Schema : {$dbSchema}\n";
-
-$pgDsn = sprintf('pgsql:host=%s;port=%s;dbname=postgres', $dbHost, $dbPort);
-
-try {
-    $pdo = new PDO($pgDsn, 'postgres', null, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-} catch (Throwable $e) {
-    fwrite(STDERR, "ERROR: Failed to connect as postgres user. Run this as a context that can access PostgreSQL superuser.\n");
-    fwrite(STDERR, "DETAILS: {$e->getMessage()}\n");
-    exit(1);
-}
+echo "Admin  : " . ($forceLocalAuth ? "local/peer auth forced" : "automatic") . "\n";
 
 function quoteIdent(string $value): string
 {
@@ -101,6 +90,61 @@ function quoteLiteral(PDO $pdo, string $value): string
     }
 
     return $quoted;
+}
+
+function connectAsAdmin(string $dbHost, string $dbPort, bool $forceLocalAuth): PDO
+{
+    $candidates = [];
+
+    if ($forceLocalAuth) {
+        $candidates = [
+            'pgsql:dbname=postgres',
+            'pgsql:host=/var/run/postgresql;dbname=postgres',
+            'pgsql:host=/run/postgresql;dbname=postgres',
+        ];
+    } else {
+        $candidates = [
+            sprintf('pgsql:host=%s;port=%s;dbname=postgres', $dbHost, $dbPort),
+            'pgsql:dbname=postgres',
+            'pgsql:host=/var/run/postgresql;dbname=postgres',
+            'pgsql:host=/run/postgresql;dbname=postgres',
+        ];
+    }
+
+    $lastError = null;
+
+    foreach ($candidates as $dsn) {
+        try {
+            return new PDO($dsn, 'postgres', null, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]);
+        } catch (Throwable $e) {
+            $lastError = $e;
+        }
+    }
+
+    $message = $forceLocalAuth
+        ? "Failed to connect as postgres user using local/peer auth."
+        : "Failed to connect as postgres user.";
+
+    if ($lastError !== null) {
+        $message .= " DETAILS: " . $lastError->getMessage();
+    }
+
+    throw new DatabaseException($message);
+}
+
+try {
+    $pdo = connectAsAdmin($dbHost, $dbPort, $forceLocalAuth);
+} catch (Throwable $e) {
+    fwrite(STDERR, "ERROR: {$e->getMessage()}\n");
+    if ($forceLocalAuth) {
+        fwrite(STDERR, "Make sure peer/local auth is enabled for the postgres role.\n");
+    } else {
+        fwrite(STDERR, "Run as postgres or use --force-local-auth if your server is configured for peer auth.\n");
+    }
+    exit(1);
 }
 
 try {
