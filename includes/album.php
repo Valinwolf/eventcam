@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 function album_respond_error(string $message): void
 {
-    throw new RuntimeException($message);
+    throw new ResponseException($message);
 }
 
 function album_default(string $eventCode, string $name): array
@@ -239,26 +239,35 @@ function album_find_upload_by_control_token(string $eventDir, string $controlTok
         }
 
         $album = album_normalize($decoded, '', '');
+        $result = album_find_upload_in_album($album, $albumPath, $controlToken);
+        if ($result !== null) {
+            return $result;
+        }
+    }
 
-        foreach (['photos', 'videos'] as $bucket) {
-            foreach ($album['uploads'][$bucket] as $item) {
-                if (
-                    is_array($item) &&
-                    isset($item['control_token']) &&
-                    is_string($item['control_token']) &&
-                    hash_equals($item['control_token'], $controlToken)
-                ) {
-                    return [
-                        'album_path' => $albumPath,
-                        'bucket' => $bucket,
-                        'id' => isset($item['id']) ? (int)$item['id'] : 0,
-                        'file' => (string)($item['file'] ?? ''),
-                        'storage_key' => (string)($item['storage_key'] ?? ''),
-                        'control_token' => (string)$item['control_token'],
-                        'name' => (string)($album['name'] ?? ''),
-                        'event_code' => (string)($album['event_code'] ?? ''),
-                    ];
-                }
+    return null;
+}
+
+function album_find_upload_in_album(array $album, string $albumPath, string $controlToken): ?array
+{
+    foreach (['photos', 'videos'] as $bucket) {
+        foreach ($album['uploads'][$bucket] as $item) {
+            if (
+                is_array($item) &&
+                isset($item['control_token']) &&
+                is_string($item['control_token']) &&
+                hash_equals($item['control_token'], $controlToken)
+            ) {
+                return [
+                    'album_path' => $albumPath,
+                    'bucket' => $bucket,
+                    'id' => isset($item['id']) ? (int)$item['id'] : 0,
+                    'file' => (string)($item['file'] ?? ''),
+                    'storage_key' => (string)($item['storage_key'] ?? ''),
+                    'control_token' => (string)$item['control_token'],
+                    'name' => (string)($album['name'] ?? ''),
+                    'event_code' => (string)($album['event_code'] ?? ''),
+                ];
             }
         }
     }

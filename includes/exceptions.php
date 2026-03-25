@@ -8,3 +8,11 @@ class ConfigException extends RuntimeException
 class DriverException extends RuntimeException
 {
 }
+
+class ResponseException extends RuntimeException
+{
+}
+
+class DatabaseException extends RuntimeException
+{
+}
