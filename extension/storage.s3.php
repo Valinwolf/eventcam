@@ -11,12 +11,14 @@ class Storage_S3 extends StorageDriver
 {
     protected S3Client $client;
     protected string $bucket;
+    protected string $acl;
 
     public function __construct(array $params = [])
     {
         parent::__construct($params);
 
         $this->bucket = (string)($params['bucket'] ?? '');
+        $this->acl = (string)($params['acl'] ?? 'public-read');
 
         if ($this->bucket === '') {
             throw new ConfigException('Missing S3 bucket');
@@ -42,9 +44,11 @@ class Storage_S3 extends StorageDriver
         $this->client = new S3Client($config);
     }
 
-    /**
-     * Server-side upload (fallback / internal use)
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Server-side upload (fallback)
+    |--------------------------------------------------------------------------
+    */
     public function put(string $sourceFile, string $key, string $contentType): void
     {
         try {
@@ -53,16 +57,18 @@ class Storage_S3 extends StorageDriver
                 'Key' => $key,
                 'SourceFile' => $sourceFile,
                 'ContentType' => $contentType,
-                'ACL' => 'private',
+                'ACL' => $this->acl,
             ]);
         } catch (AwsException $e) {
             throw new DriverException('S3 put failed: ' . $e->getMessage(), 0, $e);
         }
     }
 
-    /**
-     * Delete object
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Delete object
+    |--------------------------------------------------------------------------
+    */
     public function delete(string $key): void
     {
         try {
@@ -75,9 +81,11 @@ class Storage_S3 extends StorageDriver
         }
     }
 
-    /**
-     * Create pre-signed upload instruction
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Create pre-signed upload instruction
+    |--------------------------------------------------------------------------
+    */
     public function createUploadInstruction(string $key, string $contentType): array
     {
         try {
@@ -85,7 +93,7 @@ class Storage_S3 extends StorageDriver
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'ContentType' => $contentType,
-                'ACL' => 'private',
+                'ACL' => $this->acl,
             ]);
 
             $request = $this->client->createPresignedRequest(
@@ -108,18 +116,18 @@ class Storage_S3 extends StorageDriver
         }
     }
 
-    /**
-     * Resolve public URL
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Resolve public URL
+    |--------------------------------------------------------------------------
+    */
     public function getPublicUrl(string $key): string
     {
-        // If endpoint is set (Spaces / MinIO), build URL manually
         if (!empty($this->params['endpoint'])) {
             $endpoint = rtrim((string)$this->params['endpoint'], '/');
             return "{$endpoint}/{$this->bucket}/{$key}";
         }
 
-        // Default AWS format
         return "https://{$this->bucket}.s3.amazonaws.com/{$key}";
     }
 }

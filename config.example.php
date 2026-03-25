@@ -14,6 +14,7 @@ return [
         'key' => '',
         'secret' => '',
         'base_prefix' => 'uploads',
+        'acl' => 'public-read',
     ],
 
     'database_driver' => 'Postgres',
