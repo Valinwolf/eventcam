@@ -118,21 +118,51 @@ class Database_Postgres extends DatabaseDriver
 
     public function createMedia(string $eventCode, string $guestId, string $mime, string $extension): array
     {
+        $pdo = $this->getConnection();
+
+        $event = $this->getEvent($eventCode);
+        if (!$event) {
+            throw new DriverException('Event not found');
+        }
+
+        if ($mime === 'image/png' && !$event['allow_photos']) {
+            throw new DriverException('Photo uploads are disabled for this event');
+        }
+
+        if ($mime === 'video/quicktime' && !$event['allow_videos']) {
+            throw new DriverException('Video uploads are disabled for this event');
+        }
+
         $uuid = $this->uuid();
         $token = bin2hex(random_bytes(32));
 
         $type = str_starts_with($mime, 'video') ? 'video' : 'photo';
-
         $storageKey = "uploads/{$eventCode}/{$uuid}.{$extension}";
 
-        $stmt = $this->getConnection()->prepare(
+        $stmt = $pdo->prepare(
             'INSERT INTO media (
-                id, event_code, guest_id, mime, type,
-                storage_key, control_token, status
-             ) VALUES (
-                :id, :event, :guest, :mime, :type,
-                :key, :token, :status
-             )'
+                id,
+                event_code,
+                guest_id,
+                mime,
+                type,
+                extension,
+                storage_key,
+                control_token,
+                control_token_expires_at,
+                status
+            ) VALUES (
+                :id,
+                :event,
+                :guest,
+                :mime,
+                :type,
+                :extension,
+                :key,
+                :token,
+                :token_expires_at,
+                :status
+            )'
         );
 
         $stmt->execute([
@@ -141,19 +171,47 @@ class Database_Postgres extends DatabaseDriver
             'guest' => $guestId,
             'mime' => $mime,
             'type' => $type,
+            'extension' => $extension,
             'key' => $storageKey,
             'token' => $token,
+            'token_expires_at' => $event['event_end'] ?? null,
             'status' => 'pending',
         ]);
 
+        $guestStmt = $pdo->prepare('SELECT id, name FROM guests WHERE id = :id LIMIT 1');
+        $guestStmt->execute(['id' => $guestId]);
+        $guest = $guestStmt->fetch();
+
+        if (!$guest) {
+            throw new DriverException('Guest not found');
+        }
+
+        $file = substr(str_replace('-', '', strtolower($uuid)), 0, 3)
+            . '-'
+            . substr(str_replace('-', '', strtolower($uuid)), -4)
+            . '.'
+            . $extension;
+
         return [
             'id' => $uuid,
-            'storage_key' => $storageKey,
-            'control_token' => $token,
+            'event_code' => $eventCode,
+            'guest' => [
+                'id' => (string)$guest['id'],
+                'name' => (string)$guest['name'],
+            ],
             'type' => $type,
             'mime' => $mime,
             'extension' => $extension,
+            'file' => $file,
+            'storage_key' => $storageKey,
+            'control_token' => $token,
+            'control_token_expires_at' => $event['event_end'] ?? null,
             'status' => 'pending',
+            'failed_reason' => null,
+            'taken_at' => null,
+            'created_at' => null,
+            'uploaded_at' => null,
+            'deleted_at' => null,
         ];
     }
 
