@@ -6,12 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		07B5F1E52F720F7F005BC9A8 /* MijickCamera in Frameworks */ = {isa = PBXBuildFile; productRef = 07B5F1E42F720F7F005BC9A8 /* MijickCamera */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
-		07B5F1A92F707E19005BC9A8 /* EventCam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventCam.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		07B5F1D42F720E5D005BC9A8 /* EventCam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventCam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		07B5F1AB2F707E19005BC9A8 /* EventCam */ = {
+		07B5F2142F7357D2005BC9A8 /* EventCam */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = EventCam;
 			sourceTree = "<group>";
@@ -19,10 +23,11 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		07B5F1A62F707E19005BC9A8 /* Frameworks */ = {
+		07B5F1D12F720E5D005BC9A8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				07B5F1E52F720F7F005BC9A8 /* MijickCamera in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -32,15 +37,15 @@
 		07B5F1A02F707E19005BC9A8 = {
 			isa = PBXGroup;
 			children = (
-				07B5F1AB2F707E19005BC9A8 /* EventCam */,
 				07B5F1AA2F707E19005BC9A8 /* Products */,
+				07B5F2142F7357D2005BC9A8 /* EventCam */,
 			);
 			sourceTree = "<group>";
 		};
 		07B5F1AA2F707E19005BC9A8 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				07B5F1A92F707E19005BC9A8 /* EventCam.app */,
+				07B5F1D42F720E5D005BC9A8 /* EventCam.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,26 +53,27 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		07B5F1A82F707E19005BC9A8 /* EventCam */ = {
+		07B5F1D32F720E5D005BC9A8 /* EventCam */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 07B5F1B42F707E1A005BC9A8 /* Build configuration list for PBXNativeTarget "EventCam" */;
+			buildConfigurationList = 07B5F1DC2F720E5F005BC9A8 /* Build configuration list for PBXNativeTarget "EventCam" */;
 			buildPhases = (
-				07B5F1A52F707E19005BC9A8 /* Sources */,
-				07B5F1A62F707E19005BC9A8 /* Frameworks */,
-				07B5F1A72F707E19005BC9A8 /* Resources */,
+				07B5F1D02F720E5D005BC9A8 /* Sources */,
+				07B5F1D12F720E5D005BC9A8 /* Frameworks */,
+				07B5F1D22F720E5D005BC9A8 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				07B5F1AB2F707E19005BC9A8 /* EventCam */,
+				07B5F2142F7357D2005BC9A8 /* EventCam */,
 			);
 			name = EventCam;
 			packageProductDependencies = (
+				07B5F1E42F720F7F005BC9A8 /* MijickCamera */,
 			);
 			productName = EventCam;
-			productReference = 07B5F1A92F707E19005BC9A8 /* EventCam.app */;
+			productReference = 07B5F1D42F720E5D005BC9A8 /* EventCam.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -80,7 +86,7 @@
 				LastSwiftUpdateCheck = 2610;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
-					07B5F1A82F707E19005BC9A8 = {
+					07B5F1D32F720E5D005BC9A8 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
@@ -94,18 +100,21 @@
 			);
 			mainGroup = 07B5F1A02F707E19005BC9A8;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				07B5F1B72F707E4A005BC9A8 /* XCRemoteSwiftPackageReference "Camera" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 07B5F1AA2F707E19005BC9A8 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				07B5F1A82F707E19005BC9A8 /* EventCam */,
+				07B5F1D32F720E5D005BC9A8 /* EventCam */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		07B5F1A72F707E19005BC9A8 /* Resources */ = {
+		07B5F1D22F720E5D005BC9A8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -115,7 +124,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		07B5F1A52F707E19005BC9A8 /* Sources */ = {
+		07B5F1D02F720E5D005BC9A8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -241,7 +250,7 @@
 			};
 			name = Release;
 		};
-		07B5F1B52F707E1A005BC9A8 /* Debug */ = {
+		07B5F1DD2F720E5F005BC9A8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -249,43 +258,36 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = HPQ6U97S57;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera to capture and upload event photos and videos.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app uses the microphone to capture and upload event videos.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app offers to save photos and videos of the event they captured.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ltd.lazywolf.EventCam;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SDKROOT = auto;
+				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		07B5F1B62F707E1A005BC9A8 /* Release */ = {
+		07B5F1DE2F720E5F005BC9A8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -293,39 +295,33 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = HPQ6U97S57;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera to capture and upload event photos and videos.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app uses the microphone to capture and upload event videos.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app offers to save photos and videos of the event they captured.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ltd.lazywolf.EventCam;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SDKROOT = auto;
+				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.1;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -341,16 +337,35 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		07B5F1B42F707E1A005BC9A8 /* Build configuration list for PBXNativeTarget "EventCam" */ = {
+		07B5F1DC2F720E5F005BC9A8 /* Build configuration list for PBXNativeTarget "EventCam" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				07B5F1B52F707E1A005BC9A8 /* Debug */,
-				07B5F1B62F707E1A005BC9A8 /* Release */,
+				07B5F1DD2F720E5F005BC9A8 /* Debug */,
+				07B5F1DE2F720E5F005BC9A8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		07B5F1B72F707E4A005BC9A8 /* XCRemoteSwiftPackageReference "Camera" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Mijick/Camera.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		07B5F1E42F720F7F005BC9A8 /* MijickCamera */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 07B5F1B72F707E4A005BC9A8 /* XCRemoteSwiftPackageReference "Camera" */;
+			productName = MijickCamera;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 07B5F1A12F707E19005BC9A8 /* Project object */;
 }
