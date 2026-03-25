@@ -132,7 +132,7 @@ struct MediaView: View {
 
 			if let item = currentItem {
 				HStack {
-					Text(item.fileName)
+					Text(item.displayFileName ?? item.fileName)
 						.foregroundStyle(.white)
 						.font(.caption)
 

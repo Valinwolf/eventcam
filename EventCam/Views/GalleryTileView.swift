@@ -26,6 +26,11 @@ struct GalleryTileView: View {
 					RoundedRectangle(cornerRadius: 10)
 						.fill(.gray.opacity(0.2))
 						.frame(height: 110)
+						.overlay {
+							Image(systemName: item.type == .video ? "video.slash.fill" : "photo")
+								.font(.title3)
+								.foregroundStyle(.secondary)
+						}
 				}
 
 				if item.type == .video {
@@ -47,11 +52,16 @@ struct GalleryTileView: View {
 
 	private var uploadLabel: String {
 		switch item.uploadState {
-		case .pending: return "Pending"
-		case .queued: return "Queued"
-		case .uploading: return "Uploading"
-		case .uploaded: return "Uploaded"
-		case .failed: return "Failed"
+		case .pending:
+			return "Pending"
+		case .queued:
+			return "Queued"
+		case .uploading:
+			return "Uploading"
+		case .uploaded:
+			return "Uploaded"
+		case .failed:
+			return "Failed"
 		}
 	}
 }

@@ -24,6 +24,9 @@ final class LocalGalleryStore: ObservableObject {
 	private(set) var eventCode: String = ""
 	private(set) var participantName: String = ""
 
+	private let apiBaseURL = URL(string: "https://cam.bigwolfphoto.studio/api")!
+	private let userDefaults = UserDefaults.standard
+
 	init() {}
 
 	private var documentsURL: URL {
@@ -44,11 +47,13 @@ final class LocalGalleryStore: ObservableObject {
 	}
 
 	func configureSession(eventCode: String, participantName: String) {
-		let normalizedEvent = eventCode.trimmingCharacters(in: .whitespacesAndNewlines)
+		let normalizedEvent = eventCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+		let normalizedName = participantName.trimmingCharacters(in: .whitespacesAndNewlines)
+
 		let eventChanged = self.eventCode != normalizedEvent
 
 		self.eventCode = normalizedEvent
-		self.participantName = participantName
+		self.participantName = normalizedName
 
 		if eventChanged {
 			uploadQueue.removeAll()
@@ -119,22 +124,27 @@ final class LocalGalleryStore: ObservableObject {
 		eventFolderURL.appendingPathComponent(item.fileName)
 	}
 
-	func addPhoto(_ image: UIImage) {
+	func addPhoto(_ image: UIImage, takenAt: Date) {
 		guard !eventCode.isEmpty else { return }
 
 		ensureFolderExists()
 
 		guard let data = image.pngData() else { return }
 
+		let fileName = "\(UUID().uuidString).png"
 		let item = LocalGalleryItem(
 			id: UUID(),
 			type: .photo,
-			fileName: "\(UUID().uuidString).png",
+			fileName: fileName,
 			createdAt: Date(),
 			uploadState: .queued,
 			uploadedAt: nil,
 			storageKey: nil,
-			controlToken: nil
+			controlToken: nil,
+			remoteID: nil,
+			guestID: nil,
+			takenAt: takenAt,
+			displayFileName: nil
 		)
 
 		let destination = fileURL(for: item)
@@ -149,20 +159,25 @@ final class LocalGalleryStore: ObservableObject {
 		}
 	}
 
-	func addVideo(from temporaryURL: URL) {
+	func addVideo(from temporaryURL: URL, takenAt: Date) {
 		guard !eventCode.isEmpty else { return }
 
 		ensureFolderExists()
 
+		let fileName = "\(UUID().uuidString).mov"
 		let item = LocalGalleryItem(
 			id: UUID(),
 			type: .video,
-			fileName: "\(UUID().uuidString).mov",
+			fileName: fileName,
 			createdAt: Date(),
 			uploadState: .queued,
 			uploadedAt: nil,
 			storageKey: nil,
-			controlToken: nil
+			controlToken: nil,
+			remoteID: nil,
+			guestID: nil,
+			takenAt: takenAt,
+			displayFileName: nil
 		)
 
 		let destination = fileURL(for: item)
@@ -190,15 +205,42 @@ final class LocalGalleryStore: ObservableObject {
 	}
 
 	func deleteItem(_ item: LocalGalleryItem) {
+		let remoteID = item.remoteID
+		let controlToken = item.controlToken
+
 		let url = fileURL(for: item)
 		try? FileManager.default.removeItem(at: url)
 
 		items.removeAll { $0.id == item.id }
 		uploadQueue.removeAll { $0 == item.id }
 		saveIndex()
+
+		guard let remoteID, let controlToken, !remoteID.isEmpty, !controlToken.isEmpty else {
+			return
+		}
+
+		Task {
+			do {
+				try await deleteRemoteMedia(id: remoteID, token: controlToken)
+			} catch {
+				print("Failed to delete remote media \(remoteID): \(error)")
+			}
+		}
 	}
 
 	func eraseAll() {
+		let remoteDeletes = items.compactMap { item -> (String, String)? in
+			guard let remoteID = item.remoteID,
+				  let token = item.controlToken,
+				  !remoteID.isEmpty,
+				  !token.isEmpty
+			else {
+				return nil
+			}
+
+			return (remoteID, token)
+		}
+
 		for item in items {
 			try? FileManager.default.removeItem(at: fileURL(for: item))
 		}
@@ -206,6 +248,16 @@ final class LocalGalleryStore: ObservableObject {
 		items.removeAll()
 		uploadQueue.removeAll()
 		saveIndex()
+
+		Task {
+			for (id, token) in remoteDeletes {
+				do {
+					try await deleteRemoteMedia(id: id, token: token)
+				} catch {
+					print("Failed to delete remote media \(id): \(error)")
+				}
+			}
+		}
 	}
 
 	func enqueueUpload(for id: UUID) {
@@ -257,6 +309,9 @@ final class LocalGalleryStore: ObservableObject {
 						self.items[freshIndex].uploadedAt = Date()
 						self.items[freshIndex].storageKey = result.storageKey
 						self.items[freshIndex].controlToken = result.controlToken
+						self.items[freshIndex].remoteID = result.remoteID
+						self.items[freshIndex].guestID = result.guestID
+						self.items[freshIndex].displayFileName = result.displayFileName
 						self.saveIndex()
 					}
 
@@ -279,8 +334,11 @@ final class LocalGalleryStore: ObservableObject {
 	}
 
 	struct UploadResult {
+		let remoteID: String
+		let guestID: String
 		let storageKey: String?
 		let controlToken: String?
+		let displayFileName: String?
 	}
 
 	private func upload(item: LocalGalleryItem) async throws -> UploadResult {
@@ -292,78 +350,232 @@ final class LocalGalleryStore: ObservableObject {
 			)
 		}
 
-		guard let url = URL(string: "https://cam.bigwolfphoto.studio/api/upload") else {
+		let eventInfo = try await fetchEvent(eventCode: eventCode)
+		guard eventInfo.exists else {
 			throw NSError(
 				domain: "LocalGalleryStore",
 				code: 2,
+				userInfo: [NSLocalizedDescriptionKey: "Event does not exist"]
+			)
+		}
+
+		let guest = try await ensureGuest()
+
+		let mimeType: String
+		let fileExtension: String
+
+		switch item.type {
+		case .photo:
+			mimeType = "image/png"
+			fileExtension = "png"
+		case .video:
+			mimeType = "video/quicktime"
+			fileExtension = "mov"
+		}
+
+		let createResponse = try await createMedia(
+			eventCode: eventCode,
+			guestID: guest.id,
+			mime: mimeType
+		)
+
+		let sourceURL = fileURL(for: item)
+		let fileData = try Data(contentsOf: sourceURL)
+
+		try await uploadDirect(
+			data: fileData,
+			instruction: createResponse.upload,
+			mimeType: mimeType
+		)
+
+		do {
+			try await finalizeMedia(id: createResponse.id, status: "uploaded", reason: nil)
+		} catch {
+			try? await finalizeMedia(id: createResponse.id, status: "failed", reason: error.localizedDescription)
+			throw error
+		}
+
+		return UploadResult(
+			remoteID: createResponse.id,
+			guestID: guest.id,
+			storageKey: createResponse.storageKey,
+			controlToken: createResponse.controlToken,
+			displayFileName: createResponse.file
+		)
+	}
+
+	private func ensureGuest() async throws -> GuestResponse {
+		let key = guestStorageKey(for: participantName)
+
+		if let cachedID = userDefaults.string(forKey: key), !cachedID.isEmpty {
+			return GuestResponse(id: cachedID, name: participantName)
+		}
+
+		var request = URLRequest(url: apiBaseURL.appendingPathComponent("guest"))
+		request.httpMethod = "PUT"
+		request.timeoutInterval = 60
+		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+		let payload = GuestPutRequest(name: participantName)
+		request.httpBody = try JSONEncoder().encode(payload)
+
+		let (data, response) = try await URLSession.shared.data(for: request)
+		try validateHTTP(response: response, data: data)
+
+		let guest = try JSONDecoder().decode(GuestResponse.self, from: data)
+		userDefaults.set(guest.id, forKey: key)
+
+		return guest
+	}
+
+	private func fetchEvent(eventCode: String) async throws -> EventResponse {
+		var components = URLComponents(url: apiBaseURL.appendingPathComponent("event"), resolvingAgainstBaseURL: false)
+		components?.queryItems = [
+			URLQueryItem(name: "id", value: eventCode)
+		]
+
+		guard let url = components?.url else {
+			throw NSError(
+				domain: "LocalGalleryStore",
+				code: 3,
+				userInfo: [NSLocalizedDescriptionKey: "Invalid event URL"]
+			)
+		}
+
+		let (data, response) = try await URLSession.shared.data(from: url)
+		try validateHTTP(response: response, data: data)
+
+		return try JSONDecoder().decode(EventResponse.self, from: data)
+	}
+
+	private func createMedia(eventCode: String, guestID: String, mime: String) async throws -> MediaCreateResponse {
+		var request = URLRequest(url: apiBaseURL.appendingPathComponent("media"))
+		request.httpMethod = "PUT"
+		request.timeoutInterval = 60
+		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+		let payload = MediaCreateRequest(
+			eventCode: eventCode,
+			guestID: guestID,
+			mime: mime
+		)
+
+		request.httpBody = try JSONEncoder().encode(payload)
+
+		let (data, response) = try await URLSession.shared.data(for: request)
+		try validateHTTP(response: response, data: data)
+
+		return try JSONDecoder().decode(MediaCreateResponse.self, from: data)
+	}
+
+	private func uploadDirect(data: Data, instruction: UploadInstruction, mimeType: String) async throws {
+		guard let url = URL(string: instruction.url) else {
+			throw NSError(
+				domain: "LocalGalleryStore",
+				code: 4,
 				userInfo: [NSLocalizedDescriptionKey: "Invalid upload URL"]
 			)
 		}
 
-		let sourceURL = fileURL(for: item)
-		let fileData = try Data(contentsOf: sourceURL)
-		let boundary = UUID().uuidString
-
 		var request = URLRequest(url: url)
-		request.httpMethod = "POST"
-		request.timeoutInterval = 300
-		request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+		request.httpMethod = instruction.method
+		request.timeoutInterval = 1800
 
-		let mimeType: String
-		switch item.type {
-		case .photo:
-			mimeType = "image/png"
-		case .video:
-			mimeType = "video/quicktime"
+		if let headers = instruction.headers {
+			for (key, value) in headers {
+				request.setValue(value, forHTTPHeaderField: key)
+			}
 		}
 
-		var body = Data()
-
-		body.append("--\(boundary)\r\n".data(using: .utf8)!)
-		body.append("Content-Disposition: form-data; name=\"id\"\r\n\r\n".data(using: .utf8)!)
-		body.append("\(eventCode)\r\n".data(using: .utf8)!)
-
-		body.append("--\(boundary)\r\n".data(using: .utf8)!)
-		body.append("Content-Disposition: form-data; name=\"name\"\r\n\r\n".data(using: .utf8)!)
-		body.append("\(participantName)\r\n".data(using: .utf8)!)
-
-		body.append("--\(boundary)\r\n".data(using: .utf8)!)
-		body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(item.fileName)\"\r\n".data(using: .utf8)!)
-		body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
-		body.append(fileData)
-		body.append("\r\n".data(using: .utf8)!)
-		body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+		if request.value(forHTTPHeaderField: "Content-Type") == nil {
+			request.setValue(mimeType, forHTTPHeaderField: "Content-Type")
+		}
 
 		let config = URLSessionConfiguration.default
-		config.timeoutIntervalForRequest = 300
-		config.timeoutIntervalForResource = 600
+		config.timeoutIntervalForRequest = 1800
+		config.timeoutIntervalForResource = 10800
 
 		let session = URLSession(configuration: config)
-		let (responseData, response) = try await session.upload(for: request, from: body)
+		let (_, response) = try await session.upload(for: request, from: data)
 
 		guard let httpResponse = response as? HTTPURLResponse else {
 			throw NSError(
 				domain: "LocalGalleryStore",
-				code: 3,
+				code: 5,
+				userInfo: [NSLocalizedDescriptionKey: "Invalid upload response"]
+			)
+		}
+
+		guard (200...299).contains(httpResponse.statusCode) else {
+			throw NSError(
+				domain: "LocalGalleryStore",
+				code: httpResponse.statusCode,
+				userInfo: [NSLocalizedDescriptionKey: "Direct upload failed with status \(httpResponse.statusCode)"]
+			)
+		}
+	}
+
+	private func finalizeMedia(id: String, status: String, reason: String?) async throws {
+		var request = URLRequest(url: apiBaseURL.appendingPathComponent("media"))
+		request.httpMethod = "PATCH"
+		request.timeoutInterval = 60
+		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+		let payload = MediaPatchRequest(id: id, status: status, reason: reason)
+		request.httpBody = try JSONEncoder().encode(payload)
+
+		let (data, response) = try await URLSession.shared.data(for: request)
+		try validateHTTP(response: response, data: data)
+	}
+
+	private func deleteRemoteMedia(id: String, token: String) async throws {
+		var components = URLComponents(url: apiBaseURL.appendingPathComponent("media"), resolvingAgainstBaseURL: false)
+		components?.queryItems = [
+			URLQueryItem(name: "id", value: id),
+			URLQueryItem(name: "token", value: token)
+		]
+
+		guard let url = components?.url else {
+			throw NSError(
+				domain: "LocalGalleryStore",
+				code: 6,
+				userInfo: [NSLocalizedDescriptionKey: "Invalid delete URL"]
+			)
+		}
+
+		var request = URLRequest(url: url)
+		request.httpMethod = "DELETE"
+		request.timeoutInterval = 60
+
+		let (data, response) = try await URLSession.shared.data(for: request)
+		try validateHTTP(response: response, data: data)
+	}
+
+	private func validateHTTP(response: URLResponse, data: Data) throws {
+		guard let httpResponse = response as? HTTPURLResponse else {
+			throw NSError(
+				domain: "LocalGalleryStore",
+				code: 7,
 				userInfo: [NSLocalizedDescriptionKey: "Invalid HTTP response"]
 			)
 		}
 
 		guard (200...299).contains(httpResponse.statusCode) else {
-			let responseString = String(data: responseData, encoding: .utf8) ?? "Unknown error"
+			let responseString = String(data: data, encoding: .utf8) ?? "Unknown error"
 			throw NSError(
 				domain: "LocalGalleryStore",
 				code: httpResponse.statusCode,
 				userInfo: [NSLocalizedDescriptionKey: responseString]
 			)
 		}
+	}
 
-		let payload = try JSONDecoder().decode(UploadResponse.self, from: responseData)
+	private func guestStorageKey(for name: String) -> String {
+		let normalized = name
+			.trimmingCharacters(in: .whitespacesAndNewlines)
+			.lowercased()
 
-		return UploadResult(
-			storageKey: payload.storage_key,
-			controlToken: payload.control_token
-		)
+		return "eventcam.guest.\(normalized)"
 	}
 
 	func saveItemToPhotos(_ item: LocalGalleryItem, completion: @escaping (Bool) -> Void) {
@@ -443,7 +655,67 @@ final class LocalGalleryStore: ObservableObject {
 	}
 }
 
-private struct UploadResponse: Decodable {
-	let storage_key: String?
-	let control_token: String?
+// MARK: - API Models
+
+private struct GuestPutRequest: Encodable {
+	let name: String
+}
+
+private struct GuestResponse: Decodable {
+	let id: String
+	let name: String
+}
+
+private struct EventResponse: Decodable {
+	let success: Bool?
+	let event_code: String?
+	let exists: Bool
+}
+
+private struct MediaCreateRequest: Encodable {
+	let eventCode: String
+	let guestID: String
+	let mime: String
+
+	enum CodingKeys: String, CodingKey {
+		case eventCode = "event_code"
+		case guestID = "guest_id"
+		case mime
+	}
+}
+
+private struct MediaCreateResponse: Decodable {
+	let id: String
+	let upload: UploadInstruction
+	let controlToken: String?
+	let storageKey: String?
+	let file: String?
+
+	enum CodingKeys: String, CodingKey {
+		case id
+		case upload
+		case controlToken = "control_token"
+		case storageKey = "storage_key"
+		case file
+	}
+}
+
+private struct UploadInstruction: Decodable {
+	let method: String
+	let url: String
+	let headers: [String: String]?
+	let expiresAt: String?
+
+	enum CodingKeys: String, CodingKey {
+		case method
+		case url
+		case headers
+		case expiresAt = "expires_at"
+	}
+}
+
+private struct MediaPatchRequest: Encodable {
+	let id: String
+	let status: String
+	let reason: String?
 }

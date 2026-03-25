@@ -102,6 +102,12 @@ struct GalleryView: View {
 			.onAppear {
 				galleryStore.configureSession(eventCode: event, participantName: name)
 			}
+			.onChange(of: event) { _, newValue in
+				galleryStore.configureSession(eventCode: newValue, participantName: name)
+			}
+			.onChange(of: name) { _, newValue in
+				galleryStore.configureSession(eventCode: event, participantName: newValue)
+			}
 			.sheet(isPresented: $showingCamera) {
 				CameraView(galleryStore: galleryStore)
 					.interactiveDismissDisabled(true)

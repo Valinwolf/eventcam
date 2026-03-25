@@ -178,7 +178,7 @@ struct LoginView: View {
 
 				Spacer()
 
-				Text("Photos and videos are stored locally and uploaded in the background.")
+				Text("Photos and videos are stored locally and uploaded securely in the background.")
 					.font(.footnote)
 					.foregroundStyle(.secondary)
 					.multilineTextAlignment(.center)

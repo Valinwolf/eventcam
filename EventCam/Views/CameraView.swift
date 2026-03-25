@@ -19,11 +19,13 @@ struct CameraView: View {
 				dismiss()
 			}
 			.onImageCaptured { image, controller in
-				galleryStore.addPhoto(image)
+				let takenAt = Date()
+				galleryStore.addPhoto(image, takenAt: takenAt)
 				controller.reopenCameraScreen()
 			}
 			.onVideoCaptured { videoURL, controller in
-				galleryStore.addVideo(from: videoURL)
+				let takenAt = Date()
+				galleryStore.addVideo(from: videoURL, takenAt: takenAt)
 				controller.reopenCameraScreen()
 			}
 			.startSession()
