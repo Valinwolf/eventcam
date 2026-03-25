@@ -1,6 +1,19 @@
 <?php
 declare(strict_types=1);
 
+$allowNonPostgres = in_array('--allow-non-postgres', $argv ?? [], true);
+
+$currentUser = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
+    ? (posix_getpwuid(posix_geteuid())['name'] ?? null)
+    : getenv('USER');
+
+if (!$allowNonPostgres && $currentUser !== 'postgres') {
+    fwrite(STDERR, "ERROR: This script must be run as the 'postgres' user.\n");
+    fwrite(STDERR, "Try: sudo -u postgres php setup/postgres.php\n");
+    fwrite(STDERR, "Or override with: php setup/postgres.php --allow-non-postgres\n");
+    exit(1);
+}
+
 $projectRoot = dirname(__DIR__);
 $configFile = $projectRoot . '/config.php';
 $sqlFile = __DIR__ . '/postgres.sql';
