@@ -109,6 +109,7 @@ class Storage_S3 extends StorageDriver
                 'url' => (string)$uri,
                 'headers' => [
                     'Content-Type' => $contentType,
+                    'x-amz-acl' => $this->acl,
                 ],
                 'expires_at' => gmdate('c', time() + (15 * 60)),
             ];
