@@ -362,15 +362,12 @@ final class LocalGalleryStore: ObservableObject {
 		let guest = try await ensureGuest()
 
 		let mimeType: String
-		let fileExtension: String
 
 		switch item.type {
 		case .photo:
 			mimeType = "image/png"
-			fileExtension = "png"
 		case .video:
 			mimeType = "video/quicktime"
-			fileExtension = "mov"
 		}
 
 		let createResponse = try await createMedia(
@@ -579,22 +576,21 @@ final class LocalGalleryStore: ObservableObject {
 	}
 
 	func saveItemToPhotos(_ item: LocalGalleryItem, completion: @escaping (Bool) -> Void) {
+        let localFileURL = self.fileURL(for: item)
 		PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
 			guard status == .authorized || status == .limited else {
 				DispatchQueue.main.async { completion(false) }
 				return
 			}
 
-			let fileURL = self.fileURL(for: item)
-
 			PHPhotoLibrary.shared().performChanges {
 				switch item.type {
 				case .photo:
-					if let image = UIImage(contentsOfFile: fileURL.path) {
+					if let image = UIImage(contentsOfFile: localFileURL.path) {
 						PHAssetChangeRequest.creationRequestForAsset(from: image)
 					}
 				case .video:
-					PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+					PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: localFileURL)
 				}
 			} completionHandler: { success, _ in
 				DispatchQueue.main.async {
@@ -605,6 +601,7 @@ final class LocalGalleryStore: ObservableObject {
 	}
 
 	func saveAllToPhotos(completion: @escaping (Bool) -> Void) {
+        let localItemsWithURLs: [(item: LocalGalleryItem, url: URL)] = self.items.map { ($0, self.fileURL(for: $0)) }
 		PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
 			guard status == .authorized || status == .limited else {
 				DispatchQueue.main.async { completion(false) }
@@ -612,10 +609,10 @@ final class LocalGalleryStore: ObservableObject {
 			}
 
 			PHPhotoLibrary.shared().performChanges {
-				for item in self.items {
-					let url = self.fileURL(for: item)
+				for pair in localItemsWithURLs {
+					let url = pair.url
 
-					switch item.type {
+					switch pair.item.type {
 					case .photo:
 						if let image = UIImage(contentsOfFile: url.path) {
 							PHAssetChangeRequest.creationRequestForAsset(from: image)
@@ -642,16 +639,36 @@ final class LocalGalleryStore: ObservableObject {
 	}
 
 	private func videoThumbnail(for url: URL) -> UIImage? {
-		let asset = AVAsset(url: url)
-		let generator = AVAssetImageGenerator(asset: asset)
-		generator.appliesPreferredTrackTransform = true
+        let asset = AVURLAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
 
-		do {
-			let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-			return UIImage(cgImage: cgImage)
-		} catch {
-			return nil
-		}
+        if #available(iOS 18.0, *) {
+            // Bridge the async API to a synchronous return using a small semaphore.
+            let time = CMTime(seconds: 0, preferredTimescale: 600)
+            let semaphore = DispatchSemaphore(value: 0)
+            var outputImage: UIImage?
+
+            generator.generateCGImageAsynchronously(for: time) { image, actualTime, error in
+                if let image {
+                    outputImage = UIImage(cgImage: image)
+                } else {
+                    outputImage = nil
+                }
+                semaphore.signal()
+            }
+
+            // Wait up to 2 seconds to avoid hanging the caller in case of an unexpected stall.
+            let _ = semaphore.wait(timeout: .now() + 2)
+            return outputImage
+        } else {
+            do {
+                let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+                return UIImage(cgImage: cgImage)
+            } catch {
+                return nil
+            }
+        }
 	}
 }
 
@@ -719,3 +736,4 @@ private struct MediaPatchRequest: Encodable {
 	let status: String
 	let reason: String?
 }
+

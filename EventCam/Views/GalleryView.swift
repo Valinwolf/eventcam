@@ -109,8 +109,17 @@ struct GalleryView: View {
 				galleryStore.configureSession(eventCode: event, participantName: newValue)
 			}
 			.sheet(isPresented: $showingCamera) {
-				CameraView(galleryStore: galleryStore)
-					.interactiveDismissDisabled(true)
+				CameraView(
+					galleryStore: galleryStore,
+					reopenAfterCapture: {
+						showingCamera = false
+
+						DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+							showingCamera = true
+						}
+					}
+				)
+				.interactiveDismissDisabled(true)
 			}
 			.sheet(isPresented: $showingProfile) {
 				ProfileView(name: $name)
