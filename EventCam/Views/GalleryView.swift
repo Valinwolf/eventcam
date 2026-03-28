@@ -15,6 +15,9 @@ struct GalleryView: View {
 	@StateObject private var galleryStore = LocalGalleryStore()
 
 	@State private var showingCamera = false
+	@State private var shouldReopenCameraAfterDismiss = false
+	@State private var cameraSessionID = UUID()
+
 	@State private var showingProfile = false
 	@State private var selectedItem: LocalGalleryItem?
 	@State private var infoMessage: String?
@@ -38,7 +41,7 @@ struct GalleryView: View {
 				ScrollView {
 					LazyVGrid(columns: columns, spacing: 8) {
 						CameraLauncherTile {
-							showingCamera = true
+							openFreshCamera()
 						}
 
 						ForEach(galleryStore.items) { item in
@@ -108,17 +111,24 @@ struct GalleryView: View {
 			.onChange(of: name) { _, newValue in
 				galleryStore.configureSession(eventCode: event, participantName: newValue)
 			}
-			.sheet(isPresented: $showingCamera) {
-				CameraView(
-					galleryStore: galleryStore,
-					reopenAfterCapture: {
-						showingCamera = false
-
-						DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-							showingCamera = true
-						}
+			.fullScreenCover(
+				isPresented: $showingCamera,
+				onDismiss: {
+					handleCameraDismiss()
+				}
+			) {
+				CameraView { captured in
+					switch captured {
+					case let .photo(image, takenAt):
+						galleryStore.addPhoto(image, takenAt: takenAt)
+					case let .video(url, takenAt):
+						galleryStore.addVideo(from: url, takenAt: takenAt)
 					}
-				)
+
+					shouldReopenCameraAfterDismiss = true
+				}
+				.id(cameraSessionID)
+				.ignoresSafeArea()
 				.interactiveDismissDisabled(true)
 			}
 			.sheet(isPresented: $showingProfile) {
@@ -130,6 +140,21 @@ struct GalleryView: View {
 					selectedItemID: item.id
 				)
 			}
+		}
+	}
+
+	private func openFreshCamera() {
+		cameraSessionID = UUID()
+		showingCamera = true
+	}
+
+	private func handleCameraDismiss() {
+		guard shouldReopenCameraAfterDismiss else { return }
+
+		shouldReopenCameraAfterDismiss = false
+
+		DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+			openFreshCamera()
 		}
 	}
 }

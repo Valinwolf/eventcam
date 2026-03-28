@@ -11,9 +11,15 @@ import UIKit
 
 struct CameraView: View {
 	@Environment(\.dismiss) private var dismiss
-	@ObservedObject var galleryStore: LocalGalleryStore
 
-	let reopenAfterCapture: () -> Void
+	let onCaptureComplete: (CapturedMedia) -> Void
+
+	@State private var pendingCapture: CapturedMedia?
+
+	enum CapturedMedia {
+		case photo(UIImage, Date)
+		case video(URL, Date)
+	}
 
 	var body: some View {
 		MCamera()
@@ -21,23 +27,18 @@ struct CameraView: View {
 				dismiss()
 			}
 			.onImageCaptured { image, _ in
-				let takenAt = Date()
-				galleryStore.addPhoto(image, takenAt: takenAt)
-				reopen()
+				pendingCapture = .photo(image, Date())
+				dismiss()
 			}
 			.onVideoCaptured { videoURL, _ in
-				let takenAt = Date()
-				galleryStore.addVideo(from: videoURL, takenAt: takenAt)
-				reopen()
+				pendingCapture = .video(videoURL, Date())
+				dismiss()
 			}
 			.startSession()
-	}
-
-	private func reopen() {
-		dismiss()
-
-		//DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-		//	reopenAfterCapture()
-		//}
+			.onDisappear {
+				guard let pendingCapture else { return }
+				self.pendingCapture = nil
+				onCaptureComplete(pendingCapture)
+			}
 	}
 }
