@@ -15,12 +15,17 @@ struct LoginView: View {
 
 	@AppStorage("savedParticipantName") private var savedParticipantName: String = ""
 	@AppStorage("savedEventHistory") private var savedEventHistoryData: Data = Data()
+	@AppStorage("savedServerBaseURL") private var savedServerBaseURL: String = "https://cam.bigwolfphoto.studio"
 
 	@State private var step: Step = .name
 	@State private var draftName: String = ""
 	@State private var draftEvent: String = ""
 	@State private var showError = false
 	@State private var showHistory = false
+
+	@State private var showingServerEditor = false
+	@State private var draftServerBaseURL: String = ""
+	@State private var serverMessage: String?
 
 	@FocusState private var focusedField: Field?
 
@@ -46,6 +51,10 @@ struct LoginView: View {
 		}
 
 		return eventHistory.filter { $0.contains(query) }
+	}
+
+	private var displayServerBaseURL: String {
+		normalizedServerBaseURL(savedServerBaseURL)
 	}
 
 	var body: some View {
@@ -178,11 +187,28 @@ struct LoginView: View {
 
 				Spacer()
 
-				Text("Photos and videos are stored locally and uploaded securely in the background.")
+				VStack(spacing: 8) {
+					Button {
+						draftServerBaseURL = displayServerBaseURL
+						serverMessage = nil
+						showingServerEditor = true
+					} label: {
+						Label("Server", systemImage: "server.rack")
+					}
 					.font(.footnote)
-					.foregroundStyle(.secondary)
-					.multilineTextAlignment(.center)
-					.padding(.horizontal)
+
+					Text(displayServerBaseURL)
+						.font(.footnote.monospaced())
+						.foregroundStyle(.secondary)
+						.multilineTextAlignment(.center)
+						.padding(.horizontal)
+
+					Text("Photos and videos are stored locally and uploaded securely in the background.")
+						.font(.footnote)
+						.foregroundStyle(.secondary)
+						.multilineTextAlignment(.center)
+						.padding(.horizontal)
+				}
 			}
 			.padding()
 			.navigationTitle(step == .name ? "Welcome" : "Join Event")
@@ -192,6 +218,45 @@ struct LoginView: View {
 				Text(step == .name
 					 ? "Please enter your name."
 					 : "Please enter an event code.")
+			}
+			.sheet(isPresented: $showingServerEditor) {
+				NavigationStack {
+					Form {
+						Section("Server") {
+							TextField("Base URL", text: $draftServerBaseURL)
+								.textInputAutocapitalization(.never)
+								.autocorrectionDisabled()
+								.keyboardType(.URL)
+
+							Text("Example: https://cam.bigwolfphoto.studio")
+								.font(.footnote)
+								.foregroundStyle(.secondary)
+						}
+
+						if let serverMessage {
+							Section {
+								Text(serverMessage)
+									.font(.footnote)
+									.foregroundStyle(.secondary)
+							}
+						}
+					}
+					.navigationTitle("Server")
+					.navigationBarTitleDisplayMode(.inline)
+					.toolbar {
+						ToolbarItem(placement: .topBarLeading) {
+							Button("Cancel") {
+								showingServerEditor = false
+							}
+						}
+
+						ToolbarItem(placement: .topBarTrailing) {
+							Button("Save") {
+								saveServerBaseURL()
+							}
+						}
+					}
+				}
 			}
 			.onAppear {
 				draftName = savedParticipantName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -261,5 +326,32 @@ struct LoginView: View {
 
 		showHistory = false
 		onLoginSuccess()
+	}
+
+	private func saveServerBaseURL() {
+		let normalized = normalizedServerBaseURL(draftServerBaseURL)
+
+		guard let url = URL(string: normalized),
+			  let scheme = url.scheme?.lowercased(),
+			  (scheme == "http" || scheme == "https"),
+			  url.host != nil else {
+			serverMessage = "Enter a valid http or https base URL."
+			return
+		}
+
+		savedServerBaseURL = normalized
+		draftServerBaseURL = normalized
+		serverMessage = nil
+		showingServerEditor = false
+	}
+
+	private func normalizedServerBaseURL(_ value: String) -> String {
+		var normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+		while normalized.hasSuffix("/") {
+			normalized.removeLast()
+		}
+
+		return normalized
 	}
 }

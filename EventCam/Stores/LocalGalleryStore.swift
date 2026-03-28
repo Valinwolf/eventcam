@@ -14,9 +14,11 @@ import Combine
 @MainActor
 final class LocalGalleryStore: ObservableObject {
 	@Published private(set) var items: [LocalGalleryItem] = []
+	@Published private(set) var currentEventInfo: EventResponse?
 
 	private let rootFolderName = "LocalGallery"
 	private let indexFileName = "gallery.json"
+	private let defaultServerBaseURL = "https://cam.bigwolfphoto.studio"
 
 	private var uploadQueue: [UUID] = []
 	private var isUploading = false
@@ -24,7 +26,6 @@ final class LocalGalleryStore: ObservableObject {
 	private(set) var eventCode: String = ""
 	private(set) var participantName: String = ""
 
-	private let apiBaseURL = URL(string: "https://cam.bigwolfphoto.studio/api")!
 	private let userDefaults = UserDefaults.standard
 
 	init() {}
@@ -46,11 +47,48 @@ final class LocalGalleryStore: ObservableObject {
 		eventFolderURL.appendingPathComponent(indexFileName)
 	}
 
+	private var serverBaseURLString: String {
+		let raw = userDefaults.string(forKey: "savedServerBaseURL") ?? defaultServerBaseURL
+		let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+		if trimmed.isEmpty {
+			return defaultServerBaseURL
+		}
+
+		return trimmed.hasSuffix("/") ? String(trimmed.dropLast()) : trimmed
+	}
+
+	private var apiBaseURL: URL {
+		guard let url = URL(string: serverBaseURLString + "/api") else {
+			return URL(string: defaultServerBaseURL + "/api")!
+		}
+		return url
+	}
+
+	var isEventOpenForCapture: Bool {
+		guard let event = currentEventInfo?.event else {
+			return true
+		}
+
+		let now = Date()
+
+		if let start = event.eventStartDate, now < start {
+			return false
+		}
+
+		if let end = event.eventEndDate, now > end {
+			return false
+		}
+
+		return true
+	}
+
 	func configureSession(eventCode: String, participantName: String) {
 		let normalizedEvent = eventCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
 		let normalizedName = participantName.trimmingCharacters(in: .whitespacesAndNewlines)
 
 		let eventChanged = self.eventCode != normalizedEvent
+		let nameChanged = self.participantName != normalizedName
 
 		self.eventCode = normalizedEvent
 		self.participantName = normalizedName
@@ -61,6 +99,29 @@ final class LocalGalleryStore: ObservableObject {
 			loadIndex()
 		} else if items.isEmpty {
 			loadIndex()
+		}
+
+		if !normalizedEvent.isEmpty, eventChanged || nameChanged || currentEventInfo == nil {
+			Task {
+				await refreshEventInfo()
+			}
+		} else if normalizedEvent.isEmpty {
+			currentEventInfo = nil
+		}
+	}
+
+	func refreshEventInfo() async {
+		guard !eventCode.isEmpty else {
+			currentEventInfo = nil
+			return
+		}
+
+		do {
+			let eventInfo = try await fetchEvent(eventCode: eventCode)
+			currentEventInfo = eventInfo
+		} catch {
+			print("Failed to refresh event info: \(error)")
+			currentEventInfo = nil
 		}
 	}
 
@@ -144,7 +205,8 @@ final class LocalGalleryStore: ObservableObject {
 			remoteID: nil,
 			guestID: nil,
 			takenAt: takenAt,
-			displayFileName: nil
+			displayFileName: nil,
+			failureReason: nil
 		)
 
 		let destination = fileURL(for: item)
@@ -177,7 +239,8 @@ final class LocalGalleryStore: ObservableObject {
 			remoteID: nil,
 			guestID: nil,
 			takenAt: takenAt,
-			displayFileName: nil
+			displayFileName: nil,
+			failureReason: nil
 		)
 
 		let destination = fileURL(for: item)
@@ -233,8 +296,7 @@ final class LocalGalleryStore: ObservableObject {
 			guard let remoteID = item.remoteID,
 				  let token = item.controlToken,
 				  !remoteID.isEmpty,
-				  !token.isEmpty
-			else {
+				  !token.isEmpty else {
 				return nil
 			}
 
@@ -265,6 +327,7 @@ final class LocalGalleryStore: ObservableObject {
 
 		if let index = indexOfItem(id) {
 			items[index].uploadState = .queued
+			items[index].failureReason = nil
 			saveIndex()
 		}
 
@@ -295,6 +358,7 @@ final class LocalGalleryStore: ObservableObject {
 
 		isUploading = true
 		items[index].uploadState = .uploading
+		items[index].failureReason = nil
 		saveIndex()
 
 		let item = items[index]
@@ -312,6 +376,7 @@ final class LocalGalleryStore: ObservableObject {
 						self.items[freshIndex].remoteID = result.remoteID
 						self.items[freshIndex].guestID = result.guestID
 						self.items[freshIndex].displayFileName = result.displayFileName
+						self.items[freshIndex].failureReason = nil
 						self.saveIndex()
 					}
 
@@ -322,6 +387,7 @@ final class LocalGalleryStore: ObservableObject {
 				await MainActor.run {
 					if let freshIndex = self.indexOfItem(item.id) {
 						self.items[freshIndex].uploadState = .failed
+						self.items[freshIndex].failureReason = error.localizedDescription
 						self.saveIndex()
 					}
 
@@ -351,6 +417,8 @@ final class LocalGalleryStore: ObservableObject {
 		}
 
 		let eventInfo = try await fetchEvent(eventCode: eventCode)
+		currentEventInfo = eventInfo
+
 		guard eventInfo.exists else {
 			throw NSError(
 				domain: "LocalGalleryStore",
@@ -375,6 +443,12 @@ final class LocalGalleryStore: ObservableObject {
 			guestID: guest.id,
 			mime: mimeType
 		)
+
+		print("=== Upload Instruction Debug ===")
+		print("URL:", createResponse.upload.url)
+		print("Method:", createResponse.upload.method)
+		print("Headers:", createResponse.upload.headers ?? [:])
+		print("================================")
 
 		let sourceURL = fileURL(for: item)
 		let fileData = try Data(contentsOf: sourceURL)
@@ -493,7 +567,7 @@ final class LocalGalleryStore: ObservableObject {
 		config.timeoutIntervalForResource = 10800
 
 		let session = URLSession(configuration: config)
-		let (_, response) = try await session.upload(for: request, from: data)
+		let (responseData, response) = try await session.upload(for: request, from: data)
 
 		guard let httpResponse = response as? HTTPURLResponse else {
 			throw NSError(
@@ -503,7 +577,10 @@ final class LocalGalleryStore: ObservableObject {
 			)
 		}
 
-		guard (200...299).contains(httpResponse.statusCode) else {
+		if !(200...299).contains(httpResponse.statusCode) {
+			let responseText = String(data: responseData, encoding: .utf8) ?? "No response body"
+			print("Direct upload failed body:", responseText)
+
 			throw NSError(
 				domain: "LocalGalleryStore",
 				code: httpResponse.statusCode,
@@ -576,7 +653,8 @@ final class LocalGalleryStore: ObservableObject {
 	}
 
 	func saveItemToPhotos(_ item: LocalGalleryItem, completion: @escaping (Bool) -> Void) {
-        let localFileURL = self.fileURL(for: item)
+		let fileURL = fileURL(for: item)
+
 		PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
 			guard status == .authorized || status == .limited else {
 				DispatchQueue.main.async { completion(false) }
@@ -586,11 +664,11 @@ final class LocalGalleryStore: ObservableObject {
 			PHPhotoLibrary.shared().performChanges {
 				switch item.type {
 				case .photo:
-					if let image = UIImage(contentsOfFile: localFileURL.path) {
+					if let image = UIImage(contentsOfFile: fileURL.path) {
 						PHAssetChangeRequest.creationRequestForAsset(from: image)
 					}
 				case .video:
-					PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: localFileURL)
+					PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
 				}
 			} completionHandler: { success, _ in
 				DispatchQueue.main.async {
@@ -601,7 +679,10 @@ final class LocalGalleryStore: ObservableObject {
 	}
 
 	func saveAllToPhotos(completion: @escaping (Bool) -> Void) {
-        let localItemsWithURLs: [(item: LocalGalleryItem, url: URL)] = self.items.map { ($0, self.fileURL(for: $0)) }
+		let snapshots = items.map { item in
+			(item: item, url: fileURL(for: item))
+		}
+
 		PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
 			guard status == .authorized || status == .limited else {
 				DispatchQueue.main.async { completion(false) }
@@ -609,16 +690,14 @@ final class LocalGalleryStore: ObservableObject {
 			}
 
 			PHPhotoLibrary.shared().performChanges {
-				for pair in localItemsWithURLs {
-					let url = pair.url
-
-					switch pair.item.type {
+				for snapshot in snapshots {
+					switch snapshot.item.type {
 					case .photo:
-						if let image = UIImage(contentsOfFile: url.path) {
+						if let image = UIImage(contentsOfFile: snapshot.url.path) {
 							PHAssetChangeRequest.creationRequestForAsset(from: image)
 						}
 					case .video:
-						PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+						PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: snapshot.url)
 					}
 				}
 			} completionHandler: { success, _ in
@@ -634,106 +713,35 @@ final class LocalGalleryStore: ObservableObject {
 		case .photo:
 			return UIImage(contentsOfFile: fileURL(for: item).path)
 		case .video:
-			return videoThumbnail(for: fileURL(for: item))
+			return nil
 		}
 	}
 
-	private func videoThumbnail(for url: URL) -> UIImage? {
-        let asset = AVURLAsset(url: url)
-        let generator = AVAssetImageGenerator(asset: asset)
-        generator.appliesPreferredTrackTransform = true
+	func loadThumbnail(for item: LocalGalleryItem) async -> UIImage? {
+		switch item.type {
+		case .photo:
+			return UIImage(contentsOfFile: fileURL(for: item).path)
+		case .video:
+			return await videoThumbnail(for: fileURL(for: item))
+		}
+	}
 
-        if #available(iOS 18.0, *) {
-            // Bridge the async API to a synchronous return using a small semaphore.
-            let time = CMTime(seconds: 0, preferredTimescale: 600)
-            let semaphore = DispatchSemaphore(value: 0)
-            var outputImage: UIImage?
+	private func videoThumbnail(for url: URL) async -> UIImage? {
+		let asset = AVURLAsset(url: url)
+		let generator = AVAssetImageGenerator(asset: asset)
+		generator.appliesPreferredTrackTransform = true
 
-            generator.generateCGImageAsynchronously(for: time) { image, actualTime, error in
-                if let image {
-                    outputImage = UIImage(cgImage: image)
-                } else {
-                    outputImage = nil
-                }
-                semaphore.signal()
-            }
-
-            // Wait up to 2 seconds to avoid hanging the caller in case of an unexpected stall.
-            let _ = semaphore.wait(timeout: .now() + 2)
-            return outputImage
-        } else {
-            do {
-                let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-                return UIImage(cgImage: cgImage)
-            } catch {
-                return nil
-            }
-        }
+		return await withCheckedContinuation { continuation in
+			generator.generateCGImageAsynchronously(for: .zero) { cgImage, _, error in
+				if let cgImage {
+					continuation.resume(returning: UIImage(cgImage: cgImage))
+				} else {
+					if let error {
+						print("Failed to generate video thumbnail: \(error)")
+					}
+					continuation.resume(returning: nil)
+				}
+			}
+		}
 	}
 }
-
-// MARK: - API Models
-
-private struct GuestPutRequest: Encodable {
-	let name: String
-}
-
-private struct GuestResponse: Decodable {
-	let id: String
-	let name: String
-}
-
-private struct EventResponse: Decodable {
-	let success: Bool?
-	let event_code: String?
-	let exists: Bool
-}
-
-private struct MediaCreateRequest: Encodable {
-	let eventCode: String
-	let guestID: String
-	let mime: String
-
-	enum CodingKeys: String, CodingKey {
-		case eventCode = "event_code"
-		case guestID = "guest_id"
-		case mime
-	}
-}
-
-private struct MediaCreateResponse: Decodable {
-	let id: String
-	let upload: UploadInstruction
-	let controlToken: String?
-	let storageKey: String?
-	let file: String?
-
-	enum CodingKeys: String, CodingKey {
-		case id
-		case upload
-		case controlToken = "control_token"
-		case storageKey = "storage_key"
-		case file
-	}
-}
-
-private struct UploadInstruction: Decodable {
-	let method: String
-	let url: String
-	let headers: [String: String]?
-	let expiresAt: String?
-
-	enum CodingKeys: String, CodingKey {
-		case method
-		case url
-		case headers
-		case expiresAt = "expires_at"
-	}
-}
-
-private struct MediaPatchRequest: Encodable {
-	let id: String
-	let status: String
-	let reason: String?
-}
-

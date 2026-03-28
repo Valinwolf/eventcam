@@ -30,12 +30,11 @@ struct LocalGalleryItem: Identifiable, Codable, Equatable {
 	var uploadedAt: Date?
 	var storageKey: String?
 	var controlToken: String?
-
-	// New API-backed metadata
 	var remoteID: String?
 	var guestID: String?
 	var takenAt: Date?
 	var displayFileName: String?
+	var failureReason: String?
 
 	init(
 		id: UUID,
@@ -49,7 +48,8 @@ struct LocalGalleryItem: Identifiable, Codable, Equatable {
 		remoteID: String? = nil,
 		guestID: String? = nil,
 		takenAt: Date? = nil,
-		displayFileName: String? = nil
+		displayFileName: String? = nil,
+		failureReason: String? = nil
 	) {
 		self.id = id
 		self.type = type
@@ -63,5 +63,6 @@ struct LocalGalleryItem: Identifiable, Codable, Equatable {
 		self.guestID = guestID
 		self.takenAt = takenAt
 		self.displayFileName = displayFileName
+		self.failureReason = failureReason
 	}
 }
