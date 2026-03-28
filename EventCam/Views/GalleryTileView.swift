@@ -11,10 +11,12 @@ struct GalleryTileView: View {
 	let item: LocalGalleryItem
 	let store: LocalGalleryStore
 
+	@State private var videoThumbnail: UIImage?
+
 	var body: some View {
 		ZStack(alignment: .topTrailing) {
 			ZStack(alignment: .bottomTrailing) {
-				if let image = store.thumbnailImage(for: item) {
+				if let image = displayImage {
 					Image(uiImage: image)
 						.resizable()
 						.scaledToFill()
@@ -48,20 +50,28 @@ struct GalleryTileView: View {
 				.background(.ultraThinMaterial, in: Capsule())
 				.padding(6)
 		}
+		.task(id: item.id) {
+			guard item.type == .video else { return }
+			videoThumbnail = await store.loadThumbnail(for: item)
+		}
+	}
+
+	private var displayImage: UIImage? {
+		switch item.type {
+		case .photo:
+			return store.thumbnailImage(for: item)
+		case .video:
+			return videoThumbnail
+		}
 	}
 
 	private var uploadLabel: String {
 		switch item.uploadState {
-		case .pending:
-			return "Pending"
-		case .queued:
-			return "Queued"
-		case .uploading:
-			return "Uploading"
-		case .uploaded:
-			return "Uploaded"
-		case .failed:
-			return "Failed"
+		case .pending: return "Pending"
+		case .queued: return "Queued"
+		case .uploading: return "Uploading"
+		case .uploaded: return "Uploaded"
+		case .failed: return "Failed"
 		}
 	}
 }

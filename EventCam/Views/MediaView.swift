@@ -15,6 +15,7 @@ struct MediaView: View {
 	@State private var currentIndex: Int
 	@State private var message: String?
 	@State private var verticalOffset: CGFloat = 0
+	@State private var showingFailureInfo = false
 
 	init(galleryStore: LocalGalleryStore, selectedItemID: UUID) {
 		self.galleryStore = galleryStore
@@ -59,6 +60,11 @@ struct MediaView: View {
 				}
 			}
 		}
+		.alert("Upload Failure Details", isPresented: $showingFailureInfo) {
+			Button("OK", role: .cancel) { }
+		} message: {
+			Text(humanReadableFailureMessage(for: currentItem))
+		}
 	}
 
 	private var currentItem: LocalGalleryItem? {
@@ -89,6 +95,15 @@ struct MediaView: View {
 						Image(systemName: "arrow.down.circle")
 					}
 					.buttonStyle(.borderedProminent)
+
+					if item.uploadState == .failed {
+						Button {
+							showingFailureInfo = true
+						} label: {
+							Image(systemName: "info.circle")
+						}
+						.buttonStyle(.bordered)
+					}
 
 					Button {
 						galleryStore.enqueueUpload(for: item.id)
@@ -181,5 +196,76 @@ struct MediaView: View {
 				.background(Color.black)
 				.ignoresSafeArea(edges: .bottom)
 		}
+	}
+
+	private func humanReadableFailureMessage(for item: LocalGalleryItem?) -> String {
+		guard let item else {
+			return "No failure details are available."
+		}
+
+		let raw = item.failureReason?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+		if raw.isEmpty {
+			return "The upload failed, but the server did not provide any additional details."
+		}
+
+		if let data = raw.data(using: .utf8),
+		   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+			let errorText = (json["error"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+			let detailsText = (json["details"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+			if let detailsText, !detailsText.isEmpty {
+				return humanReadableFailureMessage(from: detailsText)
+			}
+
+			if let errorText, !errorText.isEmpty {
+				return humanReadableFailureMessage(from: errorText)
+			}
+		}
+
+		return humanReadableFailureMessage(from: raw)
+	}
+
+	private func humanReadableFailureMessage(from raw: String) -> String {
+		let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+		let lower = cleaned.lowercased()
+
+		if lower.contains("timed out") || lower.contains("timeout") {
+			return "The upload took too long and timed out. The network may have been slow or the server may not have responded in time."
+		}
+
+		if lower.contains("not found") || lower.contains("404") {
+			return "The upload destination could not be found. This usually means the server or storage path is incorrect."
+		}
+
+		if lower.contains("403") || lower.contains("forbidden") || lower.contains("access denied") {
+			return "The upload was rejected due to permissions or access restrictions."
+		}
+
+		if lower.contains("401") || lower.contains("unauthorized") {
+			return "The upload request was not authorized. A new token or valid credentials may be required."
+		}
+
+		if lower.contains("500") || lower.contains("internal server error") {
+			return "The server encountered an internal error while processing the upload."
+		}
+
+		if lower.contains("json") || lower.contains("decode") {
+			return "The app received an unexpected response from the server."
+		}
+
+		if lower.contains("network") || lower.contains("offline") || lower.contains("internet") {
+			return "The upload failed because of a network connectivity problem."
+		}
+
+		if lower.contains("direct upload failed") {
+			return "The file could not be uploaded to storage. The server prepared the upload, but the storage provider rejected it."
+		}
+
+		if lower.contains("sqlstate") || lower.contains("not null violation") {
+			return "The server rejected the upload because required media information was missing."
+		}
+
+		return cleaned
 	}
 }

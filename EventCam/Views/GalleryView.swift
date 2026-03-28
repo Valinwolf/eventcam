@@ -38,10 +38,16 @@ struct GalleryView: View {
 						.padding(.horizontal)
 				}
 
+				if !galleryStore.isEventOpenForCapture {
+					closedEventBanner
+				}
+
 				ScrollView {
 					LazyVGrid(columns: columns, spacing: 8) {
-						CameraLauncherTile {
-							openFreshCamera()
+						if galleryStore.isEventOpenForCapture {
+							CameraLauncherTile {
+								openFreshCamera()
+							}
 						}
 
 						ForEach(galleryStore.items) { item in
@@ -66,6 +72,15 @@ struct GalleryView: View {
 
 				ToolbarItem(placement: .topBarTrailing) {
 					Menu {
+						Button {
+							Task {
+								await galleryStore.refreshEventInfo()
+							}
+							infoMessage = "Refreshing event status."
+						} label: {
+							Label("Refresh Event Status", systemImage: "arrow.clockwise")
+						}
+
 						Button {
 							galleryStore.retryFailedUploads()
 							infoMessage = "Retrying failed uploads."
@@ -143,6 +158,42 @@ struct GalleryView: View {
 		}
 	}
 
+	private var closedEventBanner: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Label("This event is closed for new photos and videos.", systemImage: "camera.slash")
+				.font(.subheadline.weight(.semibold))
+
+			Text(closedEventMessage)
+				.font(.footnote)
+				.foregroundStyle(.secondary)
+		}
+		.frame(maxWidth: .infinity, alignment: .leading)
+		.padding(12)
+		.background(.orange.opacity(0.12))
+		.overlay(
+			RoundedRectangle(cornerRadius: 12)
+				.stroke(.orange.opacity(0.25), lineWidth: 1)
+		)
+		.clipShape(RoundedRectangle(cornerRadius: 12))
+		.padding(.horizontal)
+	}
+
+	private var closedEventMessage: String {
+		guard let event = galleryStore.currentEventInfo?.event else {
+			return "Uploads are currently unavailable for this event."
+		}
+
+		if let start = event.eventStartDate, Date() < start {
+			return "This event has not started yet. Please check back when the event begins."
+		}
+
+		if let end = event.eventEndDate, Date() > end {
+			return "This event has ended. You can still browse and save media that is already in your gallery."
+		}
+
+		return "Uploads are currently unavailable for this event."
+	}
+
 	private func openFreshCamera() {
 		cameraSessionID = UUID()
 		showingCamera = true
@@ -150,6 +201,10 @@ struct GalleryView: View {
 
 	private func handleCameraDismiss() {
 		guard shouldReopenCameraAfterDismiss else { return }
+		guard galleryStore.isEventOpenForCapture else {
+			shouldReopenCameraAfterDismiss = false
+			return
+		}
 
 		shouldReopenCameraAfterDismiss = false
 
