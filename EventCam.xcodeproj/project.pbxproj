@@ -7,10 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		07B5F1E52F720F7F005BC9A8 /* MijickCamera in Frameworks */ = {isa = PBXBuildFile; productRef = 07B5F1E42F720F7F005BC9A8 /* MijickCamera */; };
+		07274DE72F789CF200E9EE7C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 07274DE62F789CE800E9EE7C /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		07274DE62F789CE800E9EE7C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		07B5F1D42F720E5D005BC9A8 /* EventCam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventCam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -27,7 +28,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				07B5F1E52F720F7F005BC9A8 /* MijickCamera in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -37,6 +37,7 @@
 		07B5F1A02F707E19005BC9A8 = {
 			isa = PBXGroup;
 			children = (
+				07274DE62F789CE800E9EE7C /* README.md */,
 				07B5F1AA2F707E19005BC9A8 /* Products */,
 				07B5F2142F7357D2005BC9A8 /* EventCam */,
 			);
@@ -70,7 +71,6 @@
 			);
 			name = EventCam;
 			packageProductDependencies = (
-				07B5F1E42F720F7F005BC9A8 /* MijickCamera */,
 			);
 			productName = EventCam;
 			productReference = 07B5F1D42F720E5D005BC9A8 /* EventCam.app */;
@@ -101,7 +101,6 @@
 			mainGroup = 07B5F1A02F707E19005BC9A8;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				07B5F1B72F707E4A005BC9A8 /* XCRemoteSwiftPackageReference "Camera" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 07B5F1AA2F707E19005BC9A8 /* Products */;
@@ -118,6 +117,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				07274DE72F789CF200E9EE7C /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -347,25 +347,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		07B5F1B72F707E4A005BC9A8 /* XCRemoteSwiftPackageReference "Camera" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Mijick/Camera.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.3;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		07B5F1E42F720F7F005BC9A8 /* MijickCamera */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 07B5F1B72F707E4A005BC9A8 /* XCRemoteSwiftPackageReference "Camera" */;
-			productName = MijickCamera;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 07B5F1A12F707E19005BC9A8 /* Project object */;
 }

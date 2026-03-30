@@ -15,8 +15,8 @@ struct GalleryView: View {
 	@StateObject private var galleryStore = LocalGalleryStore()
 
 	@State private var showingCamera = false
-	@State private var shouldReopenCameraAfterDismiss = false
 	@State private var cameraSessionID = UUID()
+	@State private var pendingReopenAfterCapture = false
 
 	@State private var showingProfile = false
 	@State private var selectedItem: LocalGalleryItem?
@@ -139,8 +139,6 @@ struct GalleryView: View {
 					case let .video(url, takenAt):
 						galleryStore.addVideo(from: url, takenAt: takenAt)
 					}
-
-					shouldReopenCameraAfterDismiss = true
 				}
 				.id(cameraSessionID)
 				.ignoresSafeArea()
@@ -195,21 +193,23 @@ struct GalleryView: View {
 	}
 
 	private func openFreshCamera() {
+		guard galleryStore.isEventOpenForCapture else { return }
 		cameraSessionID = UUID()
 		showingCamera = true
 	}
 
 	private func handleCameraDismiss() {
-		guard shouldReopenCameraAfterDismiss else { return }
+		guard pendingReopenAfterCapture else { return }
 		guard galleryStore.isEventOpenForCapture else {
-			shouldReopenCameraAfterDismiss = false
+			pendingReopenAfterCapture = false
 			return
 		}
 
-		shouldReopenCameraAfterDismiss = false
+		pendingReopenAfterCapture = false
 
-		DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-			openFreshCamera()
+		DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+			cameraSessionID = UUID()
+			showingCamera = true
 		}
 	}
 }
