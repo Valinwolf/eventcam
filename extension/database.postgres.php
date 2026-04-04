@@ -137,7 +137,8 @@ class Database_Postgres extends DatabaseDriver
         $token = bin2hex(random_bytes(32));
 
         $type = str_starts_with($mime, 'video') ? 'video' : 'photo';
-        $storageKey = "uploads/{$eventCode}/{$uuid}.{$extension}";
+        $basePrefix = trim((string)($this->params['base_prefix'] ?? 'uploads'), '/');
+        $storageKey = $basePrefix . "/{$eventCode}/{$uuid}.{$extension}";
 
         $stmt = $pdo->prepare(
             'INSERT INTO media (
