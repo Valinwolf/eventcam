@@ -1,7 +1,5 @@
 -- EventCam PostgreSQL schema
--- =========================================
--- guests
--- =========================================
+
 CREATE TABLE IF NOT EXISTS guests (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
@@ -11,9 +9,6 @@ CREATE TABLE IF NOT EXISTS guests (
 CREATE INDEX IF NOT EXISTS guests_name_idx
     ON guests (name);
 
--- =========================================
--- events
--- =========================================
 CREATE TABLE IF NOT EXISTS events (
     event_code TEXT PRIMARY KEY,
     event_name TEXT NOT NULL,
@@ -40,9 +35,6 @@ CREATE TABLE IF NOT EXISTS events (
         CHECK (max_guests IS NULL OR max_guests >= 0)
 );
 
--- =========================================
--- media
--- =========================================
 CREATE TABLE IF NOT EXISTS media (
     id UUID PRIMARY KEY,
     event_code TEXT NOT NULL REFERENCES events(event_code) ON DELETE CASCADE,
@@ -92,9 +84,6 @@ CREATE INDEX IF NOT EXISTS media_uploaded_at_idx
 CREATE INDEX IF NOT EXISTS media_control_token_idx
     ON media (control_token);
 
--- =========================================
--- updated_at helper
--- =========================================
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -112,9 +101,6 @@ BEFORE UPDATE ON events
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
--- =========================================
--- useful view for released gallery items
--- =========================================
 CREATE OR REPLACE VIEW gallery_media AS
 SELECT
     m.id,
@@ -138,37 +124,3 @@ JOIN events e ON e.event_code = m.event_code
 JOIN guests g ON g.id = m.guest_id
 WHERE m.status = 'uploaded'
   AND m.deleted_at IS NULL;
-
--- =========================================
--- example seed event
--- =========================================
--- INSERT INTO events (
---     event_code,
---     event_name,
---     event_start,
---     event_end,
---     gallery_released,
---     host_names,
---     allow_photos,
---     allow_videos,
---     max_photos,
---     max_guests,
---     business_name,
---     package_name,
---     notes
--- ) VALUES (
---     'TEST_EVT',
---     'Test Event',
---     '2026-04-11 14:00:00-05',
---     '2026-04-11 23:59:59-05',
---     FALSE,
---     '["Patrick Thomas", "Raushanah Alcutt"]'::jsonb,
---     TRUE,
---     TRUE,
---     NULL,
---     NULL,
---     NULL,
---     NULL,
---     NULL
--- )
--- ON CONFLICT (event_code) DO NOTHING;
