@@ -23,6 +23,8 @@
     </header>
 
     <main class="app-main">
+
+      <!-- LOGIN VIEW -->
       <section id="loginView" class="view active">
         <div class="card">
           <h2>Join Event</h2>
@@ -50,7 +52,7 @@
                 type="text"
                 autocomplete="name"
                 autocapitalize="words"
-                placeholder="Your name"
+                placeholder="Your Name"
                 required
               />
             </label>
@@ -69,36 +71,62 @@
         </div>
       </section>
 
+      <!-- GALLERY VIEW -->
       <section id="galleryView" class="view">
         <div class="toolbar">
           <button id="profileButton" class="btn btn-secondary" type="button">Profile</button>
+
           <div class="toolbar-title">
             <h2 id="galleryTitle">Gallery</h2>
             <p id="gallerySubtitle" class="muted"></p>
           </div>
+
           <button id="logoutButton" class="btn btn-danger" type="button">Logout</button>
         </div>
 
         <div id="eventBanner" class="banner hidden"></div>
 
+        <!-- CAPTURE -->
         <div id="captureSection" class="card capture-card">
           <div class="capture-header">
             <h3>Capture</h3>
-            <p class="muted">Use your camera or choose files from your device.</p>
+            <p id="captureHelpText" class="muted">
+              Use your device camera or choose files from your device.
+            </p>
           </div>
 
           <div class="capture-actions">
-            <button id="openCameraButton" class="btn btn-primary" type="button">
-              Open Camera
-            </button>
+            <!-- PHOTO -->
+            <label id="takePhotoLabel" class="btn btn-primary file-button">
+              Take Photo
+              <input
+                id="takePhotoInput"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+              />
+            </label>
 
-            <label class="btn btn-secondary file-button">
+            <!-- VIDEO -->
+            <label id="recordVideoLabel" class="btn btn-secondary file-button">
+              Record Video
+              <input
+                id="recordVideoInput"
+                type="file"
+                accept="video/*"
+                capture="environment"
+                hidden
+              />
+            </label>
+
+            <!-- FILE PICKER -->
+            <label id="addFilesLabel" class="btn btn-secondary file-button">
               Add Files
               <input
                 id="fileInput"
                 type="file"
                 accept="image/*,video/*"
-                capture="environment"
                 multiple
                 hidden
               />
@@ -108,29 +136,25 @@
               Retry Failed
             </button>
           </div>
-
-          <video id="cameraPreview" class="camera-preview hidden" autoplay playsinline muted></video>
-
-          <div id="cameraControls" class="camera-controls hidden">
-            <button id="takePhotoButton" class="btn btn-primary" type="button">Take Photo</button>
-            <button id="startVideoButton" class="btn btn-secondary" type="button">Start Video</button>
-            <button id="stopVideoButton" class="btn btn-danger hidden" type="button">Stop Video</button>
-            <button id="closeCameraButton" class="btn btn-secondary" type="button">Close Camera</button>
-          </div>
         </div>
 
+        <!-- LOCAL GALLERY -->
         <div class="card">
           <div class="gallery-header">
-            <h3>Local Gallery</h3>
-            <button id="saveAllButton" class="btn btn-secondary" type="button">Save All</button>
+            <h3>Your Uploads</h3>
+            <button id="saveAllButton" class="btn btn-secondary" type="button">
+              Save All
+            </button>
           </div>
 
           <div id="galleryGrid" class="gallery-grid"></div>
         </div>
       </section>
+
     </main>
   </div>
 
+  <!-- PROFILE MODAL -->
   <dialog id="profileDialog" class="modal">
     <form method="dialog" class="modal-card">
       <div class="modal-header">
@@ -144,7 +168,9 @@
           <input id="profileNameInput" type="text" />
         </label>
 
-        <button id="saveProfileButton" class="btn btn-primary" type="button">Save Name</button>
+        <button id="saveProfileButton" class="btn btn-primary" type="button">
+          Save Name
+        </button>
 
         <div>
           <h4>Event History</h4>
@@ -158,6 +184,7 @@
     </form>
   </dialog>
 
+  <!-- MEDIA MODAL -->
   <dialog id="mediaDialog" class="modal media-modal">
     <div class="modal-card media-card">
       <div class="modal-header">
@@ -168,8 +195,12 @@
       <div id="mediaDialogBody" class="media-body"></div>
 
       <div class="media-actions">
-        <button id="downloadMediaButton" class="btn btn-secondary" type="button">Download</button>
-        <button id="deleteMediaButton" class="btn btn-danger" type="button">Delete</button>
+        <button id="downloadMediaButton" class="btn btn-secondary" type="button">
+          Download
+        </button>
+        <button id="deleteMediaButton" class="btn btn-danger" type="button">
+          Delete
+        </button>
       </div>
     </div>
   </dialog>

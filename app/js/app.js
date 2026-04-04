@@ -11,6 +11,7 @@ import {
   normalizeMediaItem,
   revokeObjectUrlIfNeeded,
   getErrorMessage,
+  getEventPhase,
 } from './core.js';
 import {
   showLoginView,
@@ -36,13 +37,6 @@ import {
   saveAllMedia,
   deleteActiveMedia,
 } from './media.js';
-import {
-  openCamera,
-  closeCamera,
-  takePhoto,
-  startVideoRecording,
-  stopVideoRecording,
-} from './camera.js';
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -60,18 +54,16 @@ function init() {
   renderHistoryLists(resumeHistoryEntry);
   renderGallery(openMediaDialog);
   updateGalleryHeader();
+  updateCaptureAvailability();
 }
 
 function bindEvents() {
   els.loginForm?.addEventListener('submit', onLoginSubmit);
 
-  els.openCameraButton?.addEventListener('click', openCamera);
-  els.takePhotoButton?.addEventListener('click', () => takePhoto(openMediaDialog));
-  els.startVideoButton?.addEventListener('click', () => startVideoRecording(openMediaDialog));
-  els.stopVideoButton?.addEventListener('click', stopVideoRecording);
-  els.closeCameraButton?.addEventListener('click', closeCamera);
-
+  els.takePhotoInput?.addEventListener('change', (event) => onFilesSelected(event, openMediaDialog));
+  els.recordVideoInput?.addEventListener('change', (event) => onFilesSelected(event, openMediaDialog));
   els.fileInput?.addEventListener('change', (event) => onFilesSelected(event, openMediaDialog));
+
   els.retryUploadsButton?.addEventListener('click', () => retryFailedUploads(openMediaDialog));
   els.saveAllButton?.addEventListener('click', saveAllMedia);
 
@@ -102,7 +94,6 @@ function bindEvents() {
   });
 
   window.addEventListener('beforeunload', () => {
-    closeCamera();
     persistSession();
   });
 }
@@ -131,6 +122,7 @@ function hydrateFromStorage() {
   if (state.eventCode && state.participantName && state.guestId) {
     showGalleryView();
     updateGalleryHeader();
+    updateCaptureAvailability();
     void refreshCurrentGuestMedia(openMediaDialog);
   } else {
     showLoginView();
@@ -192,6 +184,7 @@ async function onLoginSubmit(event) {
 
     showGalleryView();
     updateGalleryHeader();
+    updateCaptureAvailability();
     renderGallery(openMediaDialog);
 
     setLoginBusy(false);
@@ -236,6 +229,7 @@ async function resumeHistoryEntry(id) {
     persistSession();
     showGalleryView();
     updateGalleryHeader();
+    updateCaptureAvailability();
     renderGallery(openMediaDialog);
 
     await refreshCurrentGuestMedia(openMediaDialog);
@@ -247,6 +241,55 @@ async function resumeHistoryEntry(id) {
     setLoginBusy(false);
     setLoginMessage(getErrorMessage(error, 'Failed to open saved event.'));
     showLoginView();
+  }
+}
+
+function updateCaptureAvailability() {
+  const phase = getEventPhase(state.eventStart, state.eventEnd);
+
+  const allLabels = [
+    els.takePhotoLabel,
+    els.recordVideoLabel,
+    els.addFilesLabel,
+  ];
+
+  allLabels.forEach((label) => {
+    if (!label) {
+      return;
+    }
+    label.classList.remove('disabled');
+    label.removeAttribute('aria-disabled');
+  });
+
+  if (phase === 'upcoming') {
+    setBanner('This event has not started yet. Uploads will become available when the event begins.');
+    allLabels.forEach((label) => {
+      if (!label) return;
+      label.classList.add('disabled');
+      label.setAttribute('aria-disabled', 'true');
+    });
+    if (els.captureHelpText) {
+      els.captureHelpText.textContent = 'Uploads are not available until the event starts.';
+    }
+    return;
+  }
+
+  if (phase === 'ended') {
+    setBanner('This event has ended. New uploads are closed.');
+    allLabels.forEach((label) => {
+      if (!label) return;
+      label.classList.add('disabled');
+      label.setAttribute('aria-disabled', 'true');
+    });
+    if (els.captureHelpText) {
+      els.captureHelpText.textContent = 'This event is no longer accepting uploads.';
+    }
+    return;
+  }
+
+  setBanner('');
+  if (els.captureHelpText) {
+    els.captureHelpText.textContent = 'Use your device camera or choose files from your device.';
   }
 }
 
@@ -286,8 +329,6 @@ function clearHistory() {
 }
 
 function logout() {
-  closeCamera();
-
   state.eventCode = '';
   state.eventName = '';
   state.eventStart = null;
@@ -304,5 +345,6 @@ function logout() {
   els.participantNameInput.value = '';
   setBanner('');
   renderGallery(openMediaDialog);
+  updateCaptureAvailability();
   showLoginView();
 }

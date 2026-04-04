@@ -39,16 +39,16 @@ export const els = {
   profileButton: document.getElementById('profileButton'),
   logoutButton: document.getElementById('logoutButton'),
 
-  openCameraButton: document.getElementById('openCameraButton'),
-  takePhotoButton: document.getElementById('takePhotoButton'),
-  startVideoButton: document.getElementById('startVideoButton'),
-  stopVideoButton: document.getElementById('stopVideoButton'),
-  closeCameraButton: document.getElementById('closeCameraButton'),
-  retryUploadsButton: document.getElementById('retryUploadsButton'),
-
+  takePhotoInput: document.getElementById('takePhotoInput'),
+  recordVideoInput: document.getElementById('recordVideoInput'),
   fileInput: document.getElementById('fileInput'),
-  cameraPreview: document.getElementById('cameraPreview'),
-  cameraControls: document.getElementById('cameraControls'),
+
+  takePhotoLabel: document.getElementById('takePhotoLabel'),
+  recordVideoLabel: document.getElementById('recordVideoLabel'),
+  addFilesLabel: document.getElementById('addFilesLabel'),
+  captureHelpText: document.getElementById('captureHelpText'),
+
+  retryUploadsButton: document.getElementById('retryUploadsButton'),
 
   saveAllButton: document.getElementById('saveAllButton'),
   galleryGrid: document.getElementById('galleryGrid'),
@@ -265,4 +265,28 @@ export function getErrorMessage(error, fallback) {
 
 export function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+export function parseEventDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export function getEventPhase(eventStart, eventEnd, now = new Date()) {
+  const start = parseEventDate(eventStart);
+  const end = parseEventDate(eventEnd);
+
+  if (start && now < start) {
+    return 'upcoming';
+  }
+
+  if (end && now > end) {
+    return 'ended';
+  }
+
+  return 'active';
 }

@@ -1,7 +1,6 @@
 import { apiFetch, apiGet } from './api.js';
 import {
   state,
-  els,
   normalizeMediaItem,
   stringOrEmpty,
   createPreviewUrl,
@@ -189,11 +188,15 @@ export async function uploadMediaItem(localId, openMediaDialog) {
     });
 
     const remoteUrl = await resolveMediaUrl(id, item);
-    updateMediaItem(localId, {
-      status: 'uploaded',
-      remoteUrl,
-      error: '',
-    }, openMediaDialog);
+    updateMediaItem(
+      localId,
+      {
+        status: 'uploaded',
+        remoteUrl,
+        error: '',
+      },
+      openMediaDialog
+    );
   } catch (error) {
     console.error(error);
 
@@ -213,10 +216,14 @@ export async function uploadMediaItem(localId, openMediaDialog) {
       }
     }
 
-    updateMediaItem(localId, {
-      status: 'failed',
-      error: getErrorMessage(error, 'Upload failed'),
-    }, openMediaDialog);
+    updateMediaItem(
+      localId,
+      {
+        status: 'failed',
+        error: getErrorMessage(error, 'Upload failed'),
+      },
+      openMediaDialog
+    );
 
     setBanner(getErrorMessage(error, 'Upload failed.'));
   }
@@ -309,7 +316,7 @@ export async function downloadActiveMedia(getActiveMediaItem) {
 }
 
 export async function saveAllMedia() {
-  const downloadable = state.media.filter((item) => (item.remoteUrl || item.previewUrl));
+  const downloadable = state.media.filter((item) => item.remoteUrl || item.previewUrl);
   if (!downloadable.length) {
     setBanner('Nothing to save yet.');
     return;
@@ -345,7 +352,7 @@ export async function deleteActiveMedia(getActiveMediaItem, openMediaDialog) {
     state.currentMediaIndex = -1;
     persistSession();
     renderGallery(openMediaDialog);
-    els.mediaDialog.close();
+    document.getElementById('mediaDialog')?.close();
   } catch (error) {
     console.error(error);
     setBanner(getErrorMessage(error, 'Failed to delete media.'));
