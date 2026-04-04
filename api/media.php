@@ -52,7 +52,7 @@ function handle_get_media(): void
 
         $result = $database->getMediaByGuest($eventCode, $guestId);
         if ($result === null) {
-            respond(404, ['error' => 'Guest not found for event']);
+            respond(404, ['error' => 'Guest not found']);
         }
 
         $media = [];
