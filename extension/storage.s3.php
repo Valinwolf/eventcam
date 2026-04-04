@@ -5,8 +5,8 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../includes/storage.php';
 require_once __DIR__ . '/../includes/exceptions.php';
 
-use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
+use Aws\S3\S3Client;
 
 class Storage_S3 extends StorageDriver
 {
@@ -48,7 +48,7 @@ class Storage_S3 extends StorageDriver
     public function put(string $sourceFile, string $key, string $contentType): void
     {
         try {
-            $params = [
+            $args = [
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'SourceFile' => $sourceFile,
@@ -56,10 +56,10 @@ class Storage_S3 extends StorageDriver
             ];
 
             if ($this->acl !== '') {
-                $params['ACL'] = $this->acl;
+                $args['ACL'] = $this->acl;
             }
 
-            $this->client->putObject($params);
+            $this->client->putObject($args);
         } catch (AwsException $e) {
             throw new DriverException('S3 put failed: ' . $e->getMessage(), 0, $e);
         }
@@ -102,6 +102,30 @@ class Storage_S3 extends StorageDriver
         }
     }
 
+    public function finalizeUpload(string $key, string $contentType): void
+    {
+        try {
+            $head = $this->client->headObject([
+                'Bucket' => $this->bucket,
+                'Key' => $key,
+            ]);
+
+            if (!$head) {
+                throw new DriverException('Uploaded object not found');
+            }
+
+            if ($this->acl !== '') {
+                $this->client->putObjectAcl([
+                    'Bucket' => $this->bucket,
+                    'Key' => $key,
+                    'ACL' => $this->acl,
+                ]);
+            }
+        } catch (AwsException $e) {
+            throw new DriverException('Failed to finalize upload: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
     public function getPublicUrl(string $key): string
     {
         if (!empty($this->params['cdn_endpoint'])) {
@@ -120,7 +144,6 @@ class Storage_S3 extends StorageDriver
             return "https://{$this->bucket}.{$host}/{$key}";
         }
 
-        $region = (string)($this->params['region'] ?? 'us-east-1');
-        return "https://{$this->bucket}.{$region}.digitaloceanspaces.com/{$key}";
+        return "https://{$this->bucket}.s3.amazonaws.com/{$key}";
     }
 }

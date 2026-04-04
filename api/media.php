@@ -183,7 +183,7 @@ function handle_put_media(): void
 
 function handle_patch_media(): void
 {
-    global $database;
+    global $database, $storage;
 
     $body = get_json_body();
 
@@ -204,10 +204,24 @@ function handle_patch_media(): void
     }
 
     try {
-        $result = match ($status) {
-            'uploaded' => $database->markMediaUploaded($id),
-            'failed' => $database->markMediaFailed($id, $reason),
-        };
+        if ($status === 'uploaded') {
+            $media = $database->getMediaById($id);
+            if ($media === null) {
+                respond(404, ['error' => 'Media not found']);
+            }
+
+            $storageKey = (string)($media['storage_key'] ?? '');
+            $mime = (string)($media['mime'] ?? '');
+
+            if ($storageKey === '' || $mime === '') {
+                respond(500, ['error' => 'Media metadata incomplete']);
+            }
+
+            $storage->finalizeUpload($storageKey, $mime);
+            $result = $database->markMediaUploaded($id);
+        } else {
+            $result = $database->markMediaFailed($id, $reason);
+        }
 
         if ($result === null) {
             respond(404, ['error' => 'Media not found']);
