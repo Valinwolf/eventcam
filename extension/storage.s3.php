@@ -45,31 +45,26 @@ class Storage_S3 extends StorageDriver
         $this->client = new S3Client($config);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Server-side upload (fallback)
-    |--------------------------------------------------------------------------
-    */
     public function put(string $sourceFile, string $key, string $contentType): void
     {
         try {
-            $this->client->putObject([
+            $params = [
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'SourceFile' => $sourceFile,
                 'ContentType' => $contentType,
-                'ACL' => $this->acl,
-            ]);
+            ];
+
+            if ($this->acl !== '') {
+                $params['ACL'] = $this->acl;
+            }
+
+            $this->client->putObject($params);
         } catch (AwsException $e) {
             throw new DriverException('S3 put failed: ' . $e->getMessage(), 0, $e);
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Delete object
-    |--------------------------------------------------------------------------
-    */
     public function delete(string $key): void
     {
         try {
@@ -82,11 +77,6 @@ class Storage_S3 extends StorageDriver
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Create pre-signed upload instruction
-    |--------------------------------------------------------------------------
-    */
     public function createUploadInstruction(string $key, string $contentType): array
     {
         try {
@@ -94,14 +84,9 @@ class Storage_S3 extends StorageDriver
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'ContentType' => $contentType,
-                'ACL' => $this->acl,
             ]);
 
-            $request = $this->client->createPresignedRequest(
-                $cmd,
-                '+15 minutes'
-            );
-
+            $request = $this->client->createPresignedRequest($cmd, '+15 minutes');
             $uri = $request->getUri();
 
             return [
@@ -109,7 +94,6 @@ class Storage_S3 extends StorageDriver
                 'url' => (string)$uri,
                 'headers' => [
                     'Content-Type' => $contentType,
-                    'x-amz-acl' => $this->acl,
                 ],
                 'expires_at' => gmdate('c', time() + (15 * 60)),
             ];
@@ -118,18 +102,25 @@ class Storage_S3 extends StorageDriver
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Resolve public URL
-    |--------------------------------------------------------------------------
-    */
     public function getPublicUrl(string $key): string
     {
-        if (!empty($this->params['endpoint'])) {
-            $endpoint = rtrim((string)$this->params['endpoint'], '/');
-            return "{$endpoint}/{$this->bucket}/{$key}";
+        if (!empty($this->params['cdn_endpoint'])) {
+            $cdn = rtrim((string)$this->params['cdn_endpoint'], '/');
+            return "{$cdn}/{$key}";
         }
 
-        return "https://{$this->bucket}.s3.amazonaws.com/{$key}";
+        if (!empty($this->params['endpoint'])) {
+            $endpoint = rtrim((string)$this->params['endpoint'], '/');
+
+            if (!empty($this->params['use_path_style_endpoint'])) {
+                return "{$endpoint}/{$this->bucket}/{$key}";
+            }
+
+            $host = preg_replace('#^https?://#', '', $endpoint);
+            return "https://{$this->bucket}.{$host}/{$key}";
+        }
+
+        $region = (string)($this->params['region'] ?? 'us-east-1');
+        return "https://{$this->bucket}.{$region}.digitaloceanspaces.com/{$key}";
     }
 }
