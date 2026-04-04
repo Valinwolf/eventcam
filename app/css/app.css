@@ -1,0 +1,398 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #1d212a;
+  --text: #f5f7fb;
+  --muted: #9ba3b2;
+  --border: #2a3140;
+  --accent: #4f8cff;
+  --accent-2: #7ca8ff;
+  --danger: #d94b4b;
+  --success: #2fa36b;
+  --warning: #d7a53b;
+  --radius: 18px;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+body {
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.app-header {
+  margin-bottom: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
+.brand-text h1,
+.toolbar-title h2,
+.card h2,
+.card h3,
+.card h4 {
+  margin: 0;
+}
+
+.brand-text p,
+.muted {
+  color: var(--muted);
+}
+
+.app-main {
+  display: grid;
+  gap: 16px;
+}
+
+.view {
+  display: none;
+  gap: 16px;
+}
+
+.view.active {
+  display: grid;
+}
+
+.card {
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.stack {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: #10131a;
+  color: var(--text);
+  border-radius: 14px;
+  padding: 14px 16px;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.18);
+}
+
+.btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-secondary {
+  background: #252b38;
+  color: white;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.settings-panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #11151c;
+}
+
+.settings-panel summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.message {
+  min-height: 1.25rem;
+  color: var(--muted);
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #10131a;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.history-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.toolbar-title {
+  text-align: center;
+}
+
+.banner {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(215, 165, 59, 0.35);
+  background: rgba(215, 165, 59, 0.12);
+  color: #f5deb3;
+}
+
+.capture-card {
+  display: grid;
+  gap: 16px;
+}
+
+.capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-preview {
+  width: 100%;
+  border-radius: 18px;
+  background: #000;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.camera-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gallery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gallery-item {
+  background: #10131a;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  display: grid;
+  cursor: pointer;
+}
+
+.gallery-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: #0a0c10;
+}
+
+.gallery-meta {
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #252b38;
+  color: white;
+}
+
+.badge.uploaded {
+  background: rgba(47, 163, 107, 0.18);
+  color: #7be0ab;
+}
+
+.badge.failed {
+  background: rgba(217, 75, 75, 0.18);
+  color: #ff9e9e;
+}
+
+.badge.uploading {
+  background: rgba(79, 140, 255, 0.18);
+  color: #a9c3ff;
+}
+
+.modal {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.modal::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.modal-card {
+  width: min(92vw, 640px);
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.media-card {
+  width: min(96vw, 860px);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.icon-button {
+  border: 0;
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  background: #252b38;
+  color: white;
+  cursor: pointer;
+}
+
+.media-body {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  background: #0a0c10;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.media-body img,
+.media-body video {
+  max-width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+}
+
+.media-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-title {
+    text-align: left;
+  }
+}

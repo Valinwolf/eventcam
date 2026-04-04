@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>EventCam</title>
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="stylesheet" href="./css/app.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark">EC</div>
+        <div class="brand-text">
+          <h1>EventCam</h1>
+          <p>Capture your event memories</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section id="loginView" class="view active">
+        <div class="card">
+          <h2>Join Event</h2>
+          <p class="muted">Enter your event code and your name to continue.</p>
+
+          <form id="loginForm" class="stack">
+            <label class="field">
+              <span>Event Code</span>
+              <input
+                id="eventCodeInput"
+                name="eventCode"
+                type="text"
+                autocomplete="off"
+                autocapitalize="characters"
+                placeholder="TEST_EVT"
+                required
+              />
+            </label>
+
+            <label class="field">
+              <span>Your Name</span>
+              <input
+                id="participantNameInput"
+                name="participantName"
+                type="text"
+                autocomplete="name"
+                autocapitalize="words"
+                placeholder="Patrick Thomas"
+                required
+              />
+            </label>
+
+            <button id="joinButton" class="btn btn-primary" type="submit">
+              Join Event
+            </button>
+          </form>
+
+          <div id="loginMessage" class="message" aria-live="polite"></div>
+        </div>
+
+        <div class="card">
+          <h3>Recent Events</h3>
+          <ul id="eventHistoryList" class="history-list"></ul>
+        </div>
+      </section>
+
+      <section id="galleryView" class="view">
+        <div class="toolbar">
+          <button id="profileButton" class="btn btn-secondary" type="button">Profile</button>
+          <div class="toolbar-title">
+            <h2 id="galleryTitle">Gallery</h2>
+            <p id="gallerySubtitle" class="muted"></p>
+          </div>
+          <button id="logoutButton" class="btn btn-danger" type="button">Logout</button>
+        </div>
+
+        <div id="eventBanner" class="banner hidden"></div>
+
+        <div id="captureSection" class="card capture-card">
+          <div class="capture-header">
+            <h3>Capture</h3>
+            <p class="muted">Use your camera or choose files from your device.</p>
+          </div>
+
+          <div class="capture-actions">
+            <button id="openCameraButton" class="btn btn-primary" type="button">
+              Open Camera
+            </button>
+
+            <label class="btn btn-secondary file-button">
+              Add Files
+              <input
+                id="fileInput"
+                type="file"
+                accept="image/*,video/*"
+                capture="environment"
+                multiple
+                hidden
+              />
+            </label>
+
+            <button id="retryUploadsButton" class="btn btn-secondary" type="button">
+              Retry Failed
+            </button>
+          </div>
+
+          <video id="cameraPreview" class="camera-preview hidden" autoplay playsinline muted></video>
+
+          <div id="cameraControls" class="camera-controls hidden">
+            <button id="takePhotoButton" class="btn btn-primary" type="button">Take Photo</button>
+            <button id="startVideoButton" class="btn btn-secondary" type="button">Start Video</button>
+            <button id="stopVideoButton" class="btn btn-danger hidden" type="button">Stop Video</button>
+            <button id="closeCameraButton" class="btn btn-secondary" type="button">Close Camera</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="gallery-header">
+            <h3>Local Gallery</h3>
+            <button id="saveAllButton" class="btn btn-secondary" type="button">Save All</button>
+          </div>
+
+          <div id="galleryGrid" class="gallery-grid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="profileDialog" class="modal">
+    <form method="dialog" class="modal-card">
+      <div class="modal-header">
+        <h3>Profile</h3>
+        <button class="icon-button" value="cancel">✕</button>
+      </div>
+
+      <div class="stack">
+        <label class="field">
+          <span>Your Name</span>
+          <input id="profileNameInput" type="text" />
+        </label>
+
+        <button id="saveProfileButton" class="btn btn-primary" type="button">Save Name</button>
+
+        <div>
+          <h4>Event History</h4>
+          <ul id="profileHistoryList" class="history-list"></ul>
+        </div>
+
+        <button id="clearHistoryButton" class="btn btn-danger" type="button">
+          Clear All History
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="mediaDialog" class="modal media-modal">
+    <div class="modal-card media-card">
+      <div class="modal-header">
+        <h3 id="mediaDialogTitle">Media</h3>
+        <button id="closeMediaDialogButton" class="icon-button" type="button">✕</button>
+      </div>
+
+      <div id="mediaDialogBody" class="media-body"></div>
+
+      <div class="media-actions">
+        <button id="downloadMediaButton" class="btn btn-secondary" type="button">Download</button>
+        <button id="deleteMediaButton" class="btn btn-danger" type="button">Delete</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
