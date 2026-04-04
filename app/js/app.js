@@ -9,7 +9,6 @@ import {
   nullableString,
   stringOrEmpty,
   normalizeMediaItem,
-  stripEphemeralMediaFields,
   revokeObjectUrlIfNeeded,
   getErrorMessage,
 } from './core.js';
@@ -49,7 +48,15 @@ document.addEventListener('DOMContentLoaded', init);
 
 function init() {
   bindEvents();
-  hydrateFromStorage();
+
+  try {
+    hydrateFromStorage();
+  } catch (error) {
+    console.error('Hydrate failed:', error);
+    localStorage.removeItem(STORAGE_KEYS.session);
+    showLoginView();
+  }
+
   renderHistoryLists(resumeHistoryEntry);
   renderGallery(openMediaDialog);
   updateGalleryHeader();
@@ -146,11 +153,8 @@ async function onLoginSubmit(event) {
     return;
   }
 
-  state.eventCode = eventCode;
-  state.participantName = participantName;
-  state.media = [];
-
   setLoginBusy(true, 'Joining event...');
+  setBanner('');
 
   try {
     const eventRes = await apiGet(`/api/event?id=${encodeURIComponent(eventCode)}`);
@@ -159,22 +163,25 @@ async function onLoginSubmit(event) {
       throw new Error('Event not found');
     }
 
-    state.eventName = stringOrEmpty(eventRes.event.event_name);
-    state.eventStart = nullableString(eventRes.event.event_start);
-    state.eventEnd = nullableString(eventRes.event.event_end);
-
     const guestRes = await apiFetch('/api/guest', {
       method: 'PUT',
       body: JSON.stringify({ name: participantName }),
     });
 
-    state.guestId = stringOrEmpty(guestRes?.id);
-    if (!state.guestId) {
+    const guestId = stringOrEmpty(guestRes?.id);
+    if (!guestId) {
       throw new Error('Guest creation failed');
     }
 
-    showGalleryView();
-    updateGalleryHeader();
+    state.eventCode = eventCode;
+    state.eventName = stringOrEmpty(eventRes.event.event_name);
+    state.eventStart = nullableString(eventRes.event.event_start);
+    state.eventEnd = nullableString(eventRes.event.event_end);
+    state.participantName = participantName;
+    state.guestId = guestId;
+    state.media = [];
+    state.currentMediaIndex = -1;
+
     persistSession();
     upsertHistoryEntry({
       eventCode: state.eventCode,
@@ -183,13 +190,19 @@ async function onLoginSubmit(event) {
       guestId: state.guestId,
     });
 
-    setBanner('');
+    showGalleryView();
+    updateGalleryHeader();
     renderGallery(openMediaDialog);
-  } catch (error) {
-    console.error(error);
-    setLoginMessage(getErrorMessage(error, 'Unable to join event.'));
-  } finally {
+
     setLoginBusy(false);
+    setLoginMessage('');
+
+    void refreshCurrentGuestMedia(openMediaDialog);
+  } catch (error) {
+    console.error('Join failed:', error);
+    setLoginBusy(false);
+    setLoginMessage(getErrorMessage(error, 'Unable to join event.'));
+    showLoginView();
   }
 }
 
@@ -200,37 +213,40 @@ async function resumeHistoryEntry(id) {
     return;
   }
 
-  state.eventCode = entry.eventCode;
-  state.participantName = entry.participantName;
-  state.guestId = entry.guestId;
-  state.media = [];
-
-  els.eventCodeInput.value = state.eventCode;
-  els.participantNameInput.value = state.participantName;
-
   setLoginBusy(true, 'Opening saved event...');
 
   try {
-    const eventRes = await apiGet(`/api/event?id=${encodeURIComponent(state.eventCode)}`);
+    const eventRes = await apiGet(`/api/event?id=${encodeURIComponent(entry.eventCode)}`);
     if (!eventRes?.success || !eventRes?.event) {
       throw new Error('Event not found');
     }
 
+    state.eventCode = entry.eventCode;
     state.eventName = stringOrEmpty(eventRes.event.event_name);
     state.eventStart = nullableString(eventRes.event.event_start);
     state.eventEnd = nullableString(eventRes.event.event_end);
+    state.participantName = entry.participantName;
+    state.guestId = entry.guestId;
+    state.media = [];
+    state.currentMediaIndex = -1;
 
+    els.eventCodeInput.value = state.eventCode;
+    els.participantNameInput.value = state.participantName;
+
+    persistSession();
     showGalleryView();
     updateGalleryHeader();
-    persistSession();
+    renderGallery(openMediaDialog);
 
     await refreshCurrentGuestMedia(openMediaDialog);
+
+    setLoginBusy(false);
+    setLoginMessage('');
   } catch (error) {
-    console.error(error);
+    console.error('Resume failed:', error);
+    setLoginBusy(false);
     setLoginMessage(getErrorMessage(error, 'Failed to open saved event.'));
     showLoginView();
-  } finally {
-    setLoginBusy(false);
   }
 }
 

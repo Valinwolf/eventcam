@@ -228,14 +228,34 @@ class Database_Postgres extends DatabaseDriver
 
     public function getMediaByGuest(string $eventCode, string $guestId): ?array
     {
+        $guestStmt = $this->getConnection()->prepare(
+            'SELECT id, name
+            FROM guests
+            WHERE id = :id
+            LIMIT 1'
+        );
+
+        $guestStmt->execute(['id' => $guestId]);
+        $guest = $guestStmt->fetch();
+
+        if (!$guest) {
+            return null;
+        }
+
         $stmt = $this->getConnection()->prepare(
-            'SELECT m.*, g.name
-             FROM media m
-             JOIN guests g ON g.id = m.guest_id
-             WHERE m.event_code = :event
-               AND m.guest_id = :guest
-               AND m.status = \'uploaded\'
-               AND m.deleted_at IS NULL'
+            'SELECT
+                m.id,
+                m.storage_key,
+                m.type,
+                m.extension,
+                m.taken_at,
+                m.uploaded_at
+            FROM media m
+            WHERE m.event_code = :event
+            AND m.guest_id = :guest
+            AND m.status = \'uploaded\'
+            AND m.deleted_at IS NULL
+            ORDER BY m.taken_at NULLS LAST, m.uploaded_at'
         );
 
         $stmt->execute([
@@ -245,21 +265,22 @@ class Database_Postgres extends DatabaseDriver
 
         $rows = $stmt->fetchAll();
 
-        if (!$rows) {
-            return null;
-        }
-
         return [
             'guest' => [
-                'id' => $guestId,
-                'name' => $rows[0]['name'],
+                'id' => (string)$guest['id'],
+                'name' => (string)$guest['name'],
             ],
-            'media' => array_map(function ($r) {
+            'media' => array_map(function (array $row): array {
+                $id = (string)$row['id'];
+                $extension = (string)($row['extension'] ?? 'bin');
+
                 return [
-                    'id' => $r['id'],
-                    'storage_key' => $r['storage_key'],
-                    'type' => $r['type'],
-                    'taken' => $r['taken_at'],
+                    'id' => $id,
+                    'file' => $this->formatDisplayFile($id, $extension),
+                    'storage_key' => (string)$row['storage_key'],
+                    'type' => (string)$row['type'],
+                    'taken' => $row['taken_at'] ?? null,
+                    'uploaded_at' => $row['uploaded_at'] ?? null,
                 ];
             }, $rows),
         ];
@@ -365,6 +386,16 @@ class Database_Postgres extends DatabaseDriver
                 ];
             }, $rows),
         ];
+    }
+
+    private function formatDisplayFile(string $uuid, string $extension): string
+    {
+        $clean = str_replace('-', '', strtolower($uuid));
+
+        $first = substr($clean, 0, 3);
+        $last = substr($clean, -4);
+
+        return $first . '-' . $last . '.' . strtolower($extension);
     }
 
     private function uuid(): string
