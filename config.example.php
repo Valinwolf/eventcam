@@ -30,7 +30,22 @@ return [
     ],
 
     'allowed_mime_types' => [
+        // photos
+        'image/jpeg' => 'jpg',
         'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+        'image/heic' => 'heic',
+        'image/heif' => 'heif',
+        'image/avif' => 'avif',
+
+        // videos
+        'video/mp4' => 'mp4',
         'video/quicktime' => 'mov',
+        'video/webm' => 'webm',
+        'video/3gpp' => '3gp',
+        'video/3gpp2' => '3g2',
+        'video/x-matroska' => 'mkv',
+        'video/ogg' => 'ogv',
     ],
 ];
