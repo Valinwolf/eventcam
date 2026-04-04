@@ -25,9 +25,11 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!response.ok) {
+    const detail = typeof data?.details === 'string' ? data.details : '';
+    const errorText = typeof data?.error === 'string' ? data.error : '';
     const message =
-      data?.error ||
-      data?.details ||
+      detail ||
+      errorText ||
       data?.message ||
       `Request failed (${response.status})`;
 
