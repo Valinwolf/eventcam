@@ -182,6 +182,8 @@ try {
         throw new DriverException('Database driver class not found: ' . $databaseDriverClass);
     }
 
+    $databaseParams['base_prefix'] = (string)($storageParams['base_prefix'] ?? 'uploads');
+
     /** @var DatabaseDriver $database */
     $database = new $databaseDriverClass($databaseParams);
 
