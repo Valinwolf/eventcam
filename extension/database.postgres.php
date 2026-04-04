@@ -320,19 +320,50 @@ class Database_Postgres extends DatabaseDriver
 
     public function getGallery(string $eventCode): ?array
     {
+        $event = $this->getEvent($eventCode);
+        if ($event === null) {
+            return null;
+        }
+
         $stmt = $this->getConnection()->prepare(
-            'SELECT m.*, g.name
-             FROM media m
-             JOIN guests g ON g.id = m.guest_id
-             WHERE m.event_code = :event
-               AND m.status = \'uploaded\'
-               AND m.deleted_at IS NULL
-             ORDER BY m.taken_at NULLS LAST, m.uploaded_at'
+            'SELECT
+                m.id,
+                m.storage_key,
+                m.type,
+                m.taken_at,
+                m.uploaded_at,
+                g.id AS guest_id,
+                g.name AS guest_name
+            FROM media m
+            JOIN guests g ON g.id = m.guest_id
+            WHERE m.event_code = :event
+            AND m.status = \'uploaded\'
+            AND m.deleted_at IS NULL
+            ORDER BY m.taken_at NULLS LAST, m.uploaded_at'
         );
 
         $stmt->execute(['event' => $eventCode]);
+        $rows = $stmt->fetchAll();
 
-        return $stmt->fetchAll();
+        return [
+            'event' => $event['event_name'],
+            'start' => $event['event_start'] ?? null,
+            'end' => $event['event_end'] ?? null,
+            'hosts' => is_array($event['host_names'] ?? null) ? $event['host_names'] : [],
+            'gallery' => array_map(static function (array $row): array {
+                return [
+                    'id' => (string)$row['id'],
+                    'storage_key' => (string)$row['storage_key'],
+                    'guest' => [
+                        'id' => (string)$row['guest_id'],
+                        'name' => (string)$row['guest_name'],
+                    ],
+                    'taken' => $row['taken_at'] ?? null,
+                    'type' => $row['type'] ?? null,
+                    'uploaded_at' => $row['uploaded_at'] ?? null,
+                ];
+            }, $rows),
+        ];
     }
 
     private function uuid(): string
